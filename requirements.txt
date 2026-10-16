@@ -1,0 +1,4 @@
+osmium
+numpy
+pillow
+pyserial
