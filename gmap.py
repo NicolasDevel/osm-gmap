@@ -1,20 +1,23 @@
 """
 Lector del formato .gmap. Es la implementación de referencia de lo que hará el firmware:
-leer nodos y aristas, recorrer la geometría y buscar en el índice espacial.
+leer nodos y aristas, recorrer la geometría, buscar en el índice espacial y leer la jerarquía de contracción.
 """
+import bisect
 import math
 from pathlib import Path
 
 import numpy as np
 
 from gmap_format import (
-    CLASS_MASK, FLAG_GEOM_REVERSED, FLAG_ROUNDABOUT, GEOM_HEADER, HEADER, MAGIC, NONE, POINT, SCALE, VERSION,
+    CH_ARC, CLASS_MASK, FLAG_GEOM_REVERSED, FLAG_ROUNDABOUT, GEOM_HEADER, HEADER, MAGIC, NONE, POINT, SCALE, VERSION,
 )
 
 NODE_DTYPE = np.dtype([("lat", "<i4"), ("lon", "<i4"), ("first_edge", "<u4")])
 EDGE_DTYPE = np.dtype([
-    ("target", "<u4"), ("geom", "<u4"), ("name", "<u4"), ("length", "<u2"), ("speed", "u1"), ("flags", "u1"),
+    ("source", "<u4"), ("target", "<u4"), ("geom", "<u4"), ("name", "<u4"), ("length", "<u4"), ("weight", "<u4"),
+    ("speed", "u1"), ("flags", "u1"), ("pad", "<u2"),
 ])
+CH_ARC_DTYPE = np.dtype([("other", "<u4"), ("weight", "<u4"), ("a", "<u4"), ("b", "<u4")])
 
 
 def local_xy(origin, point):
@@ -29,12 +32,28 @@ def bearing(a, b):
     return math.degrees(math.atan2(x, y)) % 360
 
 
+class ChSide:
+    """Un lado de la jerarquía de contracción: lista de adyacencia hacia arriba, indexada por nodo."""
+
+    def __init__(self, data, offset, node_count):
+        arcs = int(np.frombuffer(data, "<u4", 1, offset)[0])
+        first = np.frombuffer(data, "<u4", node_count + 1, offset + 4)
+        recs = np.frombuffer(data, CH_ARC_DTYPE, arcs, offset + 4 + (node_count + 1) * 4)
+        self.first = first.tolist()
+        self.other = recs["other"].tolist()
+        self.weight = recs["weight"].tolist()
+        self.a = recs["a"].tolist()
+        self.b = recs["b"].tolist()
+        self.arc_count = arcs
+
+
 class Graph:
     def __init__(self, path):
         self.data = Path(path).read_bytes()
         (magic, version, _, self.node_count, self.edge_count,
          min_lat, min_lon, max_lat, max_lon, cell, self.cols, self.rows,
-         nodes_off, edges_off, grid_off, self.geom_off, self.names_off, file_size) = HEADER.unpack_from(self.data)
+         nodes_off, edges_off, grid_off, self.geom_off, self.names_off, ch_fwd_off, ch_bwd_off,
+         file_size) = HEADER.unpack_from(self.data)
         if magic != MAGIC or version != VERSION or file_size != len(self.data):
             raise ValueError(f"{path} no es un .gmap v{VERSION} válido")
         self.min_lat, self.min_lon = min_lat / SCALE, min_lon / SCALE
@@ -43,22 +62,29 @@ class Graph:
 
         nodes = np.frombuffer(self.data, NODE_DTYPE, self.node_count + 1, nodes_off)
         edges = np.frombuffer(self.data, EDGE_DTYPE, self.edge_count, edges_off)
-        cells = self.cols * self.rows
-        self.grid_start = np.frombuffer(self.data, "<u4", cells + 1, grid_off)
-        self.grid_items = np.frombuffer(self.data, "<u4", int(self.grid_start[-1]), grid_off + (cells + 1) * 4)
 
-        # Listas de Python: el acceso por elemento es mucho más rápido que con numpy dentro de A*.
+        # Índice espacial disperso: celdas no vacías ordenadas, inicio de cada una y las aristas.
+        cell_count = int(np.frombuffer(self.data, "<u4", 1, grid_off)[0])
+        self.cell_ids = np.frombuffer(self.data, "<u4", cell_count, grid_off + 4).tolist()
+        self.cell_start = np.frombuffer(self.data, "<u4", cell_count + 1, grid_off + 4 + cell_count * 4)
+        self.cell_items = np.frombuffer(self.data, "<u4", int(self.cell_start[-1]), grid_off + 4 + (2 * cell_count + 1) * 4)
+
+        # Listas de Python: el acceso por elemento es mucho más rápido que con numpy dentro de los bucles.
         self.lat = (nodes["lat"] / SCALE).tolist()
         self.lon = (nodes["lon"] / SCALE).tolist()
         self.first_edge = nodes["first_edge"].tolist()
+        self.source = edges["source"].tolist()
         self.target = edges["target"].tolist()
         self.geom = edges["geom"].tolist()
         self.name_ref = edges["name"].tolist()
         self.length = edges["length"].tolist()
+        self.weight = edges["weight"].tolist()
         self.speed = edges["speed"].tolist()
         self.flags = edges["flags"].tolist()
-        self.source = np.repeat(np.arange(self.node_count), np.diff(nodes["first_edge"])).tolist()
         self._in_edges = None
+
+        self.ch_fwd = ChSide(self.data, ch_fwd_off, self.node_count)
+        self.ch_bwd = ChSide(self.data, ch_bwd_off, self.node_count)
 
     def point(self, node):
         return self.lat[node], self.lon[node]
@@ -101,14 +127,22 @@ class Graph:
                 inner.reverse()
         return [self.point(self.source[e]), *inner, self.point(self.target[e])]
 
+    def edges_in_cell(self, row, col):
+        if not (0 <= row < self.rows and 0 <= col < self.cols):
+            return []
+        cid = row * self.cols + col
+        k = bisect.bisect_left(self.cell_ids, cid)
+        if k == len(self.cell_ids) or self.cell_ids[k] != cid:
+            return []
+        return self.cell_items[self.cell_start[k]:self.cell_start[k + 1]].tolist()
+
     def edges_near(self, lat, lon, radius_cells=1):
         row = int((lat - self.min_lat) / self.cell)
         col = int((lon - self.min_lon) / self.cell)
         found = set()
-        for r in range(max(row - radius_cells, 0), min(row + radius_cells, self.rows - 1) + 1):
-            for c in range(max(col - radius_cells, 0), min(col + radius_cells, self.cols - 1) + 1):
-                i = r * self.cols + c
-                found.update(self.grid_items[self.grid_start[i]:self.grid_start[i + 1]].tolist())
+        for r in range(row - radius_cells, row + radius_cells + 1):
+            for c in range(col - radius_cells, col + radius_cells + 1):
+                found.update(self.edges_in_cell(r, c))
         return found
 
     def nearest_node(self, lat, lon):

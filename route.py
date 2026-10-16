@@ -2,14 +2,15 @@
 Ruteo A* sobre el grafo y cálculo de maniobras (flecha + distancia, al estilo Beeline).
 Es la referencia del algoritmo que correrá en la placa.
 """
+import bisect
 import heapq
 import math
 from dataclasses import dataclass
 
 from gmap import Graph, bearing, local_xy
-from gmap_format import FLAG_LINK
+from gmap_format import CH_ORIGINAL, FLAG_LINK
 
-MAX_SPEED_MS = 120 / 3.6  # para la heurística de A*: nunca sobreestima el tiempo restante
+MAX_SPEED_KMH = 120  # para la heurística de A*: nunca sobreestima el tiempo restante
 
 # Umbrales de giro (grados, positivo = derecha).
 STRAIGHT_DEG = 20
@@ -19,16 +20,16 @@ SHARP_DEG = 170
 BEARING_SAMPLE_M = 15  # distancia a la que se mide el rumbo de entrada y de salida de un cruce
 
 
-def route(graph: Graph, start: int, goal: int):
-    """Ruta más rápida (por tiempo estimado) como lista de aristas. None si no hay camino."""
+def route_astar(graph: Graph, start: int, goal: int):
+    """Ruta más rápida con A* sobre el grafo completo. Se conserva como referencia para validar la CH."""
     goal_pt = graph.point(goal)
 
-    def h(n):
-        return math.hypot(*local_xy(graph.point(n), goal_pt)) / MAX_SPEED_MS
+    def h(n):  # décimas de segundo a la velocidad máxima
+        return math.hypot(*local_xy(graph.point(n), goal_pt)) * 36 / MAX_SPEED_KMH
 
-    best = {start: 0.0}
+    best = {start: 0}
     came_from = {}
-    open_heap = [(h(start), 0.0, start)]
+    open_heap = [(h(start), 0, start)]
     while open_heap:
         _, cost, node = heapq.heappop(open_heap)
         if node == goal:
@@ -37,17 +38,95 @@ def route(graph: Graph, start: int, goal: int):
                 e = came_from[node]
                 path.append(e)
                 node = graph.source[e]
-            return path[::-1]
+            return path[::-1], cost
         if cost > best.get(node, math.inf):
             continue
         for e in graph.out_edges(node):
             nxt = graph.target[e]
-            c = cost + graph.length[e] / (graph.speed[e] / 3.6)
+            c = cost + graph.weight[e]
             if c < best.get(nxt, math.inf):
                 best[nxt] = c
                 came_from[nxt] = e
                 heapq.heappush(open_heap, (c + h(nxt), c, nxt))
-    return None
+    return None, math.inf
+
+
+def _unpack(graph, side, arc, out):
+    """Desarma un arco de la CH en las aristas originales (en orden). Atajo = backward(a) + forward(b)."""
+    stack = [(side, arc)]
+    while stack:
+        sd, a = stack.pop()
+        ch = graph.ch_fwd if sd == "f" else graph.ch_bwd
+        if ch.a[a] & CH_ORIGINAL:
+            out.append(ch.a[a] & ~CH_ORIGINAL)
+        else:
+            stack.append(("f", ch.b[a]))  # se apila primero la segunda mitad para procesarla después
+            stack.append(("b", ch.a[a]))
+
+
+def route_ch(graph: Graph, start: int, goal: int, stats=None):
+    """Ruta más rápida con la jerarquía de contracción: Dijkstra bidireccional solo hacia arriba."""
+    dist = ({start: 0}, {goal: 0})
+    pred = ({}, {})  # nodo -> arco por el que se llegó
+    heaps = ([(0, start)], [(0, goal)])
+    sides = (graph.ch_fwd, graph.ch_bwd)
+    best, meet = math.inf, None
+    settled = 0
+    while heaps[0] or heaps[1]:
+        # Se avanza por el lado con la clave más baja; cada lado se detiene cuando ya no puede mejorar.
+        k = 0 if heaps[0] and (not heaps[1] or heaps[0][0][0] <= heaps[1][0][0]) else 1
+        d, u = heapq.heappop(heaps[k])
+        if d >= best:
+            heaps[k].clear()
+            continue
+        if d > dist[k].get(u, math.inf):
+            continue
+        settled += 1
+        if u in dist[1 - k] and d + dist[1 - k][u] < best:
+            best, meet = d + dist[1 - k][u], u
+        ch = sides[k]
+        for a in range(ch.first[u], ch.first[u + 1]):
+            v, nd = ch.other[a], d + ch.weight[a]
+            if nd < dist[k].get(v, math.inf):
+                dist[k][v] = nd
+                pred[k][v] = a
+                heapq.heappush(heaps[k], (nd, v))
+    if stats is not None:
+        stats["settled"] = settled
+    if meet is None:
+        return None, math.inf
+
+    # Subida desde el inicio (arcos forward) y bajada hacia el destino (arcos backward).
+    up = []
+    n = meet
+    while n != start:
+        a = pred[0][n]
+        up.append(a)
+        n = _arc_tail_forward(graph, a)
+    path = []
+    for a in reversed(up):
+        _unpack(graph, "f", a, path)
+    n = meet
+    while n != goal:
+        a = pred[1][n]
+        _unpack(graph, "b", a, path)
+        n = _arc_head_backward(graph, a)
+    return path, best
+
+
+def _arc_tail_forward(graph, a):
+    """Nodo donde está guardado un arco forward (su cola)."""
+    return bisect.bisect_right(graph.ch_fwd.first, a) - 1
+
+
+def _arc_head_backward(graph, a):
+    """Nodo donde está guardado un arco backward (en el sentido original, su cabeza)."""
+    return bisect.bisect_right(graph.ch_bwd.first, a) - 1
+
+
+def route(graph: Graph, start: int, goal: int):
+    """Ruta más rápida como lista de aristas (usa la CH). None si no hay camino."""
+    return route_ch(graph, start, goal)[0]
 
 
 def _walk(points, distance):

@@ -4,13 +4,18 @@ Convierte un extracto de OpenStreetMap (.osm.pbf) en el grafo vial binario (.gma
 
 Solo se conservan las vías por las que puede ir una moto. Los nodos del grafo son las intersecciones
 y los extremos de las vías; los puntos intermedios de cada tramo se guardan aparte como geometría
-(para dibujar el cruce y calcular el ángulo de giro). El formato está en FORMAT.md.
+(para dibujar el cruce y calcular el ángulo de giro). Además se precalcula la jerarquía de contracción
+(CH) con RoutingKit, para que la placa rutee distancias largas leyendo poco de la SD. El formato está
+en FORMAT.md.
 
 Uso:
   python build_graph.py --pbf colombia.osm.pbf --region bogota --out out/bogota.gmap
 """
 import argparse
 import math
+import struct
+import subprocess
+import tempfile
 import time
 from collections import Counter
 from pathlib import Path
@@ -18,13 +23,20 @@ from pathlib import Path
 import osmium
 
 from gmap_format import (
-    EDGE, FLAG_GEOM_REVERSED, FLAG_LINK, FLAG_ROUNDABOUT, GEOM_HEADER, HEADER, MAGIC, NODE, NONE, POINT,
-    SCALE, VERSION,
+    CH_ARC, EDGE, FLAG_GEOM_REVERSED, FLAG_LINK, FLAG_ROUNDABOUT, GEOM_HEADER, HEADER, MAGIC, NODE, NONE, POINT,
+    CHUNK_SIZE, SCALE, VERSION, travel_time_ds, write_chunks,
 )
+
+TOOLS_DIR = Path(__file__).resolve().parent
+CH_TOOL = TOOLS_DIR / "ch" / "build_ch"
+ROUTINGKIT = TOOLS_DIR / "third_party" / "RoutingKit"
+
 
 # min_lat, min_lon, max_lat, max_lon
 REGIONS = {
     "bogota": (4.45, -74.25, 4.84, -73.98),
+    "cundinamarca": (3.70, -74.95, 5.90, -73.00),  # incluye Bogotá
+    "colombia": (-4.5, -82.0, 13.6, -66.8),  # incluye San Andrés y Providencia
 }
 
 # highway -> (clase, km/h cuando la vía no trae maxspeed)
@@ -89,6 +101,14 @@ def haversine_m(a, b):
     return 2 * 6_371_000 * math.asin(math.sqrt(h))
 
 
+def morton(row, col):
+    """Índice en curva Z: intercala los bits de fila y columna."""
+    z = 0
+    for bit in range(16):
+        z |= ((col >> bit) & 1) << (2 * bit) | ((row >> bit) & 1) << (2 * bit + 1)
+    return z
+
+
 def simplify(points, tolerance_m):
     """Douglas-Peucker en metros (proyección equirectangular local). Conserva siempre los extremos."""
     if len(points) <= 2:
@@ -112,6 +132,38 @@ def simplify(points, tolerance_m):
             keep[best] = True
             stack += [(i, best), (best, j)]
     return [p for p, k_ in zip(points, keep) if k_]
+
+
+def ensure_ch_tool():
+    """Compila tools/ch/build_ch (con el código de RoutingKit) si todavía no existe."""
+    if CH_TOOL.exists():
+        return
+    if not ROUTINGKIT.exists():
+        print("Descargando RoutingKit...")
+        subprocess.run(["git", "clone", "-q", "--depth", "1", "https://github.com/RoutingKit/RoutingKit.git",
+                        str(ROUTINGKIT)], check=True)
+    print("Compilando tools/ch/build_ch...")
+    src = ROUTINGKIT / "src"
+    subprocess.run(["clang++", "-std=c++17", "-O3", "-DNDEBUG", f"-I{ROUTINGKIT / 'include'}", "-o", str(CH_TOOL),
+                    str(CH_TOOL.with_suffix(".cpp")), *(str(src / f) for f in (
+                        "contraction_hierarchy.cpp", "bit_vector.cpp", "timer.cpp", "vector_io.cpp", "graph_util.cpp"))],
+                   check=True)
+
+
+def build_contraction_hierarchy(node_count, tails, heads, weights):
+    """Devuelve las secciones forward y backward de la CH (ver tools/ch/build_ch.cpp y FORMAT.md)."""
+    ensure_ch_tool()
+    with tempfile.TemporaryDirectory() as tmp:
+        src, dst = Path(tmp) / "grafo.bin", Path(tmp) / "ch.bin"
+        with open(src, "wb") as f:
+            f.write(struct.pack("<II", node_count, len(tails)))
+            for arr in (tails, heads, weights):
+                f.write(struct.pack(f"<{len(arr)}I", *arr))
+        subprocess.run([str(CH_TOOL), str(src), str(dst)], check=True, stderr=subprocess.DEVNULL)
+        data = dst.read_bytes()
+    fwd_arcs = struct.unpack_from("<I", data, 0)[0]
+    fwd_size = 4 + (node_count + 1) * 4 + fwd_arcs * CH_ARC.size
+    return data[:fwd_size], data[fwd_size:]
 
 
 class RoadCollector(osmium.SimpleHandler):
@@ -208,24 +260,20 @@ def build(pbf, bbox, out_path):
     def cell_of(lat, lon):
         return int((lat - min_lat) / CELL_DEG), int((lon - min_lon) / CELL_DEG)
 
-    # Nodos ordenados por celda: los que están cerca quedan cerca en la SD (menos lecturas al rutear).
-    order = sorted(graph_refs, key=lambda r: (*cell_of(*coords[r]), coords[r]))
+    # Nodos ordenados por curva Z (Morton) de su celda: lo que está cerca en el mapa, en cualquier dirección,
+    # queda cerca en el archivo. Con un orden fila por fila, en un país cada fila cruza todo el mapa y una ruta
+    # hacia el norte saltaría de un extremo del archivo al otro.
+    order = sorted(graph_refs, key=lambda r: (morton(*cell_of(*coords[r])), coords[r]))
     node_id = {r: i for i, r in enumerate(order)}
 
-    # Geometría y nombres: una sola copia por tramo, compartida por las dos direcciones.
+    # Geometría y nombres: una sola copia por tramo, compartida por las dos direcciones. La geometría se
+    # escribe después, en el orden de las aristas, para que también quede ordenada por cercanía.
     geom_blob, name_blob, name_off = bytearray(), bytearray(), {}
-    seg_info = []  # (a, b, geom_off, name_off, length, way)
+    seg_info = []  # (a, b, puntos intermedios, name_off, length, way)
     for seg, way in segments:
         pts = [coords[r] for r in seg]
         length = sum(haversine_m(pts[k], pts[k + 1]) for k in range(len(pts) - 1))
-        interior = simplify(pts, SIMPLIFY_TOLERANCE_M)[1:-1]
-        if interior:
-            g = len(geom_blob)
-            geom_blob += GEOM_HEADER.pack(len(interior), 0)
-            for lat, lon in interior:
-                geom_blob += POINT.pack(round(lat * SCALE), round(lon * SCALE))
-        else:
-            g = NONE
+        g = simplify(pts, SIMPLIFY_TOLERANCE_M)[1:-1]
         name = way["name"]
         if not name:
             n = NONE
@@ -238,72 +286,101 @@ def build(pbf, bbox, out_path):
 
     # Aristas dirigidas agrupadas por nodo de origen (CSR).
     out_edges = [[] for _ in order]
-    too_long = 0
-    for s, (a, b, g, n, length, way) in enumerate(seg_info):
+    for s_, (a, b, g, n, length, way) in enumerate(seg_info):
         flags = way["class"] | (FLAG_ROUNDABOUT if way["roundabout"] else 0) | (FLAG_LINK if way["link"] else 0)
-        if length > 65_535:
-            too_long += 1
-        meters = min(round(length), 65_535)
+        meters = round(length)
         if way["oneway"] >= 0:
-            out_edges[a].append((b, g, n, meters, way["speed"], flags, s))
+            out_edges[a].append((b, g, n, meters, way["speed"], flags, s_))
         if way["oneway"] <= 0:
-            out_edges[b].append((a, g, n, meters, way["speed"], flags | FLAG_GEOM_REVERSED, s))
+            out_edges[b].append((a, g, n, meters, way["speed"], flags | FLAG_GEOM_REVERSED, s_))
 
     nodes_blob, edges_blob = bytearray(), bytearray()
+    tails, heads, weights = [], [], []
     seg_edge = {}  # tramo -> una de sus aristas, para el índice espacial
+    seg_geom = {}  # tramo -> offset de su geometría (se escribe la primera vez que aparece)
     edge_count = 0
     for i, ref in enumerate(order):
         lat, lon = coords[ref]
         nodes_blob += NODE.pack(round(lat * SCALE), round(lon * SCALE), edge_count)
-        for target, g, n, meters, speed, flags, s in out_edges[i]:
-            edges_blob += EDGE.pack(target, g, n, meters, speed, flags)
-            seg_edge.setdefault(s, edge_count)
+        for target, interior, n, meters, speed, flags, s_ in out_edges[i]:
+            if s_ not in seg_geom:
+                if interior:
+                    seg_geom[s_] = len(geom_blob)
+                    geom_blob += GEOM_HEADER.pack(len(interior), 0)
+                    for plat, plon in interior:
+                        geom_blob += POINT.pack(round(plat * SCALE), round(plon * SCALE))
+                else:
+                    seg_geom[s_] = NONE
+            g = seg_geom[s_]
+            weight = travel_time_ds(meters, speed)
+            edges_blob += EDGE.pack(i, target, g, n, meters, weight, speed, flags, 0)
+            tails.append(i)
+            heads.append(target)
+            weights.append(weight)
+            seg_edge.setdefault(s_, edge_count)
             edge_count += 1
     nodes_blob += NODE.pack(0, 0, edge_count)  # centinela: fin de las aristas del último nodo
 
-    # Índice espacial: por cada celda, las aristas cuyo tramo la toca (una arista por tramo).
-    cells = [[] for _ in range(rows * cols)]
-    for s, (seg, _) in enumerate(segments):
+    # Índice espacial disperso: solo las celdas con vías (para un país, la cuadrícula completa sería enorme).
+    # Por cada celda, las aristas cuyo tramo la toca (una arista por tramo).
+    cells = {}
+    for s_, (seg, _) in enumerate(segments):
         pts = [coords[r] for r in seg]
         r0, c0 = cell_of(min(p[0] for p in pts), min(p[1] for p in pts))
         r1, c1 = cell_of(max(p[0] for p in pts), max(p[1] for p in pts))
         for r in range(r0, r1 + 1):
             for c in range(c0, c1 + 1):
-                cells[r * cols + c].append(seg_edge[s])
-    grid_index, grid_items = bytearray(), bytearray()
+                cells.setdefault(r * cols + c, []).append(seg_edge[s_])
+    cell_ids = sorted(cells)
+    grid_blob = bytearray(struct.pack("<I", len(cell_ids)))
+    grid_blob += struct.pack(f"<{len(cell_ids)}I", *cell_ids)
     total = 0
-    for items in cells:
-        grid_index += total.to_bytes(4, "little")
-        for e in items:
-            grid_items += e.to_bytes(4, "little")
-        total += len(items)
-    grid_index += total.to_bytes(4, "little")
+    starts = []
+    for cid in cell_ids:
+        starts.append(total)
+        total += len(cells[cid])
+    starts.append(total)
+    grid_blob += struct.pack(f"<{len(starts)}I", *starts)
+    for cid in cell_ids:
+        grid_blob += struct.pack(f"<{len(cells[cid])}I", *cells[cid])
+
+    print(f"  {len(order):,} nodos, {edge_count:,} aristas; calculando la jerarquía de contracción...")
+    t_ch = time.time()
+    ch_fwd, ch_bwd = build_contraction_hierarchy(len(order), tails, heads, weights)
+    print(f"  jerarquía lista en {time.time() - t_ch:.0f} s")
 
     nodes_off = HEADER.size
     edges_off = nodes_off + len(nodes_blob)
     grid_off = edges_off + len(edges_blob)
-    geom_off = grid_off + len(grid_index) + len(grid_items)
+    geom_off = grid_off + len(grid_blob)
     names_off = geom_off + len(geom_blob)
-    file_size = names_off + len(name_blob)
+    ch_fwd_off = names_off + len(name_blob)
+    ch_fwd_off += -ch_fwd_off % 4  # secciones de la CH alineadas a 4 bytes
+    ch_bwd_off = ch_fwd_off + len(ch_fwd)
+    file_size = ch_bwd_off + len(ch_bwd)
     header = HEADER.pack(
         MAGIC, VERSION, HEADER.size, len(order), edge_count,
         round(min_lat * SCALE), round(min_lon * SCALE), round(max_lat * SCALE), round(max_lon * SCALE),
         round(CELL_DEG * SCALE), cols, rows,
-        nodes_off, edges_off, grid_off, geom_off, names_off, file_size,
+        nodes_off, edges_off, grid_off, geom_off, names_off, ch_fwd_off, ch_bwd_off, file_size,
     )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "wb") as f:
-        for part in (header, nodes_blob, edges_blob, grid_index, grid_items, geom_blob, name_blob):
+        for part in (header, nodes_blob, edges_blob, grid_blob, geom_blob, name_blob):
             f.write(part)
+        f.write(b"\0" * (ch_fwd_off - names_off - len(name_blob)))
+        f.write(ch_fwd)
+        f.write(ch_bwd)
 
-    kb = lambda b: f"{len(b) / 1024:,.0f} KB"
-    print(f"  {len(order):,} nodos ({kb(nodes_blob)}), {edge_count:,} aristas ({kb(edges_blob)})")
-    print(f"  índice {cols}×{rows} celdas ({kb(grid_index + grid_items)}), "
-          f"geometría {kb(geom_blob)}, {len(name_off):,} nombres ({kb(name_blob)})")
-    if too_long:
-        print(f"  aviso: {too_long} tramos de más de 65 km quedaron truncados a 65 535 m")
-    print(f"Listo: {out_path} ({file_size / 1024 / 1024:.1f} MB) en {time.time() - t0:.0f} s")
+    mb = lambda b: f"{len(b) / 1048576:,.1f} MB"
+    print(f"  nodos {mb(nodes_blob)}, aristas {mb(edges_blob)}, índice {len(cell_ids):,} celdas ({mb(grid_blob)}), "
+          f"geometría {mb(geom_blob)}, {len(name_off):,} nombres ({mb(name_blob)})")
+    print(f"  jerarquía: forward {mb(ch_fwd)}, backward {mb(ch_bwd)}")
+    chunks_dir = out_path.with_suffix("")
+    chunks = write_chunks(out_path, chunks_dir)
+    print(f"Listo: {out_path} ({file_size / 1048576:.1f} MB) en {time.time() - t0:.0f} s")
+    print(f"Para la SD: {chunks_dir}/ ({chunks} archivos de {CHUNK_SIZE >> 20} MB) -> copiar a /maps/{chunks_dir.name}/")
 
 
 if __name__ == "__main__":
