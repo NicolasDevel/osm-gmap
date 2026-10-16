@@ -1,0 +1,7 @@
+.venv/
+out/
+__pycache__/
+*.osm.pbf
+third_party/
+ch/build_ch
+.DS_Store

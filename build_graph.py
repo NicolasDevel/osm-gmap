@@ -135,14 +135,14 @@ def simplify(points, tolerance_m):
 
 
 def ensure_ch_tool():
-    """Compila tools/ch/build_ch (con el código de RoutingKit) si todavía no existe."""
+    """Compila ch/build_ch (con el código de RoutingKit) si todavía no existe."""
     if CH_TOOL.exists():
         return
     if not ROUTINGKIT.exists():
         print("Descargando RoutingKit...")
         subprocess.run(["git", "clone", "-q", "--depth", "1", "https://github.com/RoutingKit/RoutingKit.git",
                         str(ROUTINGKIT)], check=True)
-    print("Compilando tools/ch/build_ch...")
+    print("Compilando ch/build_ch...")
     src = ROUTINGKIT / "src"
     subprocess.run(["clang++", "-std=c++17", "-O3", "-DNDEBUG", f"-I{ROUTINGKIT / 'include'}", "-o", str(CH_TOOL),
                     str(CH_TOOL.with_suffix(".cpp")), *(str(src / f) for f in (
@@ -151,7 +151,7 @@ def ensure_ch_tool():
 
 
 def build_contraction_hierarchy(node_count, tails, heads, weights):
-    """Devuelve las secciones forward y backward de la CH (ver tools/ch/build_ch.cpp y FORMAT.md)."""
+    """Devuelve las secciones forward y backward de la CH (ver ch/build_ch.cpp y FORMAT.md)."""
     ensure_ch_tool()
     with tempfile.TemporaryDirectory() as tmp:
         src, dst = Path(tmp) / "grafo.bin", Path(tmp) / "ch.bin"

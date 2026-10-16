@@ -122,7 +122,7 @@ Cadenas UTF-8 terminadas en `\0`, sin repetir. Se usa `name` de OSM, o `ref` si 
 
 ## Jerarquía de contracción
 
-La calcula `tools/ch/build_ch` con [RoutingKit](https://github.com/RoutingKit/RoutingKit) sobre los pesos
+La calcula `ch/build_ch` con [RoutingKit](https://github.com/RoutingKit/RoutingKit) sobre los pesos
 `weight_ds`. Cada nodo tiene un rango; la CH agrega **atajos** para que toda ruta óptima se pueda armar
 subiendo de rango desde el origen y bajando hasta el destino.
 
@@ -141,7 +141,7 @@ Cada lado (forward y backward) tiene la misma estructura, **indexada por número
 | 8 | u32 | a | si el bit 31 está encendido: arco original, `a & 0x7FFFFFFF` es el id de la arista. Si no: primera mitad del atajo (un arco **backward**) |
 | 12 | u32 | b | atajo: segunda mitad (un arco **forward**). Arco original: 0 |
 
-**Consulta** (ver `route_ch` en `tools/route.py`):
+**Consulta** (ver `route_ch` en `route.py`):
 1. Dijkstra desde el origen sobre los arcos forward y, a la vez, desde el destino sobre los arcos backward.
    Cada lado se detiene cuando su menor distancia pendiente ya no mejora la mejor ruta encontrada.
 2. La ruta pasa por el nodo de encuentro con menor suma de distancias.
