@@ -1,11 +1,12 @@
-# gps-moto-maps
+# osm-gmap
 
-Genera mapas de ruteo offline para motos a partir de OpenStreetMap, pensados para microcontroladores con
-poca memoria (un ESP32-S3 con microSD).
+Genera mapas de ruteo offline a partir de OpenStreetMap, pensados para microcontroladores con poca memoria
+(por ejemplo, un ESP32 con microSD).
 
-Convierte un extracto `.osm.pbf` en un archivo `.gmap`: un grafo vial binario con solo las vías aptas para
-moto, geometría simplificada, nombres, un índice espacial y una **jerarquía de contracción** precalculada.
-Con ella, una ruta de 1.000 km se calcula visitando unos cientos de nodos, leyendo poco de la tarjeta.
+Convierte un extracto `.osm.pbf` en un archivo `.gmap`: un grafo vial binario con las vías aptas para el
+vehículo elegido, geometría simplificada, nombres, un índice espacial y una **jerarquía de contracción**
+precalculada. Con ella, una ruta de 1.000 km se calcula visitando unos cientos de nodos, leyendo poco de la
+tarjeta.
 
 ## Uso
 
@@ -17,7 +18,11 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 Genera `out/colombia.gmap` y `out/colombia/`, el mismo mapa partido en pedazos de 4 MB para la microSD.
-Regiones incluidas: `bogota`, `cundinamarca`, `colombia` (se agregan en `REGIONS` de `build_graph.py`).
+
+- `--profile moto` (por defecto) o `--profile carro`: qué restricciones de acceso y de sentido de OSM se
+  aplican. Se agregan más en `PROFILES` de `build_graph.py`.
+- Regiones incluidas: `bogota`, `cundinamarca`, `colombia`. Se agregan en `REGIONS` (un rectángulo de
+  latitud y longitud).
 
 La primera vez descarga y compila [RoutingKit](https://github.com/RoutingKit/RoutingKit) para la jerarquía
 de contracción: hace falta `git` y `clang++`.

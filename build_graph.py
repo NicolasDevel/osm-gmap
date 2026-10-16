@@ -2,14 +2,14 @@
 """
 Convierte un extracto de OpenStreetMap (.osm.pbf) en el grafo vial binario (.gmap) que lee la placa.
 
-Solo se conservan las vías por las que puede ir una moto. Los nodos del grafo son las intersecciones
+Solo se conservan las vías por las que puede ir el vehículo (perfil moto o carro). Los nodos del grafo son las intersecciones
 y los extremos de las vías; los puntos intermedios de cada tramo se guardan aparte como geometría
 (para dibujar el cruce y calcular el ángulo de giro). Además se precalcula la jerarquía de contracción
 (CH) con RoutingKit, para que la placa rutee distancias largas leyendo poco de la SD. El formato está
 en FORMAT.md.
 
 Uso:
-  python build_graph.py --pbf colombia.osm.pbf --region bogota --out out/bogota.gmap
+  python build_graph.py --pbf colombia.osm.pbf --region bogota --out out/bogota.gmap [--profile carro]
 """
 import argparse
 import math
@@ -53,23 +53,28 @@ HIGHWAYS = {
 }
 EXCLUDED_SERVICE = {"parking_aisle", "driveway", "drive-through", "emergency_access"}
 DENIED_ACCESS = {"no", "private", "agricultural", "forestry", "emergency"}
-ACCESS_KEYS = ("motorcycle", "motor_vehicle", "vehicle", "access")  # del más específico al más general
+# Perfiles de vehículo: qué etiquetas de acceso y de sentido de OSM se consultan (de la más específica a la
+# más general). El resto del filtro y del formato es igual para todos.
+PROFILES = {
+    "moto": {"access": ("motorcycle", "motor_vehicle", "vehicle", "access"), "oneway": "oneway:motorcycle"},
+    "carro": {"access": ("motorcar", "motor_vehicle", "vehicle", "access"), "oneway": "oneway:motorcar"},
+}
 
 CELL_DEG = 0.0025          # celda del índice espacial: ≈ 280 m
 SIMPLIFY_TOLERANCE_M = 2.0  # Douglas-Peucker sobre la geometría intermedia
 
 
-def moto_allowed(tags):
-    for key in ACCESS_KEYS:
+def vehicle_allowed(tags, profile):
+    for key in profile["access"]:
         value = tags.get(key)
         if value is not None:
             return value not in DENIED_ACCESS
     return True
 
 
-def oneway_direction(tags, highway):
+def oneway_direction(tags, highway, profile):
     """1 = solo en el sentido en que está dibujada la vía, -1 = solo en contra, 0 = doble sentido."""
-    value = tags.get("oneway:motorcycle") or tags.get("oneway")
+    value = tags.get(profile["oneway"]) or tags.get("oneway")
     if value in ("yes", "1", "true"):
         return 1
     if value == "-1":
@@ -167,10 +172,11 @@ def build_contraction_hierarchy(node_count, tails, heads, weights):
 
 
 class RoadCollector(osmium.SimpleHandler):
-    """Recoge las vías aptas para moto que tocan la región, con las coordenadas de sus nodos."""
+    """Recoge las vías aptas para el vehículo que tocan la región, con las coordenadas de sus nodos."""
 
-    def __init__(self, bbox):
+    def __init__(self, bbox, profile):
         super().__init__()
+        self.profile = profile
         self.min_lat, self.min_lon, self.max_lat, self.max_lon = bbox
         self.ways = []    # dicts con refs, clase, velocidad, sentido, glorieta, enlace, nombre
         self.coords = {}  # id OSM del nodo -> (lat, lon)
@@ -182,7 +188,7 @@ class RoadCollector(osmium.SimpleHandler):
             return
         if highway == "service" and tags.get("service") in EXCLUDED_SERVICE:
             return
-        if tags.get("area") == "yes" or not moto_allowed(tags):
+        if tags.get("area") == "yes" or not vehicle_allowed(tags, self.profile):
             return
 
         refs, points, inside = [], [], False
@@ -204,7 +210,7 @@ class RoadCollector(osmium.SimpleHandler):
             "refs": refs,
             "class": road_class,
             "speed": parse_speed(tags.get("maxspeed"), default_speed),
-            "oneway": oneway_direction(tags, highway),
+            "oneway": oneway_direction(tags, highway, self.profile),
             "roundabout": tags.get("junction") in ("roundabout", "circular"),
             "link": highway.endswith("_link"),
             "name": tags.get("name") or tags.get("ref") or "",
@@ -240,13 +246,13 @@ def split_into_segments(ways):
     return segments
 
 
-def build(pbf, bbox, out_path):
+def build(pbf, bbox, out_path, profile):
     t0 = time.time()
     print(f"Leyendo {pbf} (región {bbox})...")
-    collector = RoadCollector(bbox)
+    collector = RoadCollector(bbox, profile)
     collector.apply_file(str(pbf), locations=True, idx="flex_mem")
     ways, coords = collector.ways, collector.coords
-    print(f"  {len(ways):,} vías aptas para moto ({time.time() - t0:.0f} s)")
+    print(f"  {len(ways):,} vías aptas ({time.time() - t0:.0f} s)")
 
     segments = split_into_segments(ways)
     graph_refs = {r for seg, _ in segments for r in (seg[0], seg[-1])}
@@ -388,5 +394,6 @@ if __name__ == "__main__":
     parser.add_argument("--pbf", required=True, type=Path, help="extracto .osm.pbf (por ejemplo, Colombia de Geofabrik)")
     parser.add_argument("--region", default="bogota", choices=sorted(REGIONS))
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--profile", default="moto", choices=sorted(PROFILES), help="vehículo (por defecto moto)")
     args = parser.parse_args()
-    build(args.pbf, REGIONS[args.region], args.out)
+    build(args.pbf, REGIONS[args.region], args.out, PROFILES[args.profile])
