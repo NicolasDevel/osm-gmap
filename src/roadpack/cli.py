@@ -34,6 +34,22 @@ def _print_sections(sections, total):
         print(f"    {name:<12} {_mb(size):>10}  {size / total:6.1%}")
 
 
+COORDINATE_OPTIONS = ("--bbox", "--from", "--to")
+
+
+def _join_coordinate_values(argv):
+    """argparse takes "-12.1,-77.0" for an option: glue coordinates to their flag (--from=-12.1,-77.0)."""
+    out, i = [], 0
+    while i < len(argv):
+        if argv[i] in COORDINATE_OPTIONS and i + 1 < len(argv):
+            out.append(f"{argv[i]}={argv[i + 1]}")
+            i += 2
+        else:
+            out.append(argv[i])
+            i += 1
+    return out
+
+
 def cmd_build(args):
     from .osm import PROFILES
     from .pipeline import build
@@ -168,7 +184,7 @@ def main(argv=None):
     r.add_argument("--images", type=Path, metavar="DIR", help="render the route and each maneuver screen as PNG")
     r.set_defaults(func=cmd_route)
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(_join_coordinate_values(sys.argv[1:] if argv is None else argv))
     try:
         args.func(args)
     except (OSError, ValueError, RuntimeError) as e:

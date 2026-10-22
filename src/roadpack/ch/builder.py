@@ -4,6 +4,7 @@ settling a few hundred nodes.
 The C++ helper (build_ch.cpp, next to this file) is compiled on first use into a cache directory, together
 with a pinned RoutingKit checkout. Requires git and a C++17 compiler.
 """
+import hashlib
 import os
 import shutil
 import struct
@@ -45,8 +46,10 @@ def cache_dir() -> Path:
 def ensure_tool(log=print) -> Path:
     """Path to the compiled build_ch helper, building it (and fetching RoutingKit) if needed."""
     root = cache_dir()
-    tool = root / f"build_ch-{ROUTINGKIT_COMMIT[:8]}"
-    if tool.exists() and tool.stat().st_mtime >= SOURCE.stat().st_mtime:
+    # Named after the RoutingKit commit and the helper's source, so any change rebuilds it.
+    source_hash = hashlib.sha1(SOURCE.read_bytes()).hexdigest()[:8]
+    tool = root / f"build_ch-{ROUTINGKIT_COMMIT[:8]}-{source_hash}"
+    if tool.exists():
         return tool
     routingkit = root / "RoutingKit"
     if not (routingkit / "src").exists():

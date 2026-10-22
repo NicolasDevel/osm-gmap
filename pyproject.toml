@@ -32,3 +32,6 @@ path = "src/roadpack/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/roadpack"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

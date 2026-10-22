@@ -50,6 +50,17 @@ and `--images` renders the route and each maneuver screen.
 
 The binary format is specified in [FORMAT.md](FORMAT.md).
 
+## Tests
+
+```bash
+pip install -e '.[test]' && pytest
+```
+
+The tests build small synthetic OpenStreetMap files: a hand-made town that exercises every rule (one-ways,
+access tags per vehicle, roundabouts, loops, parking aisles, roads crossing the bounding box, geometry
+simplification) and random street grids, on which the contraction hierarchy must match Dijkstra on every pair
+of nodes.
+
 ## Licenses
 
 - This repository's code: [MIT](LICENSE).
