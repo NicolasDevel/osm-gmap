@@ -13,6 +13,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+
 from ..format.spec import CH_ARC
 
 ROUTINGKIT_URL = "https://github.com/RoutingKit/RoutingKit.git"
@@ -76,7 +78,7 @@ def build_ch(node_count, tails, heads, weights, log=print) -> ContractionHierarc
         with open(src, "wb") as f:
             f.write(struct.pack("<II", node_count, len(tails)))
             for arr in (tails, heads, weights):
-                f.write(struct.pack(f"<{len(arr)}I", *arr))
+                f.write(np.asarray(arr, "<u4").tobytes())
         subprocess.run([str(tool), str(src), str(dst)], check=True, stderr=subprocess.DEVNULL)
         data = dst.read_bytes()
     fwd_arcs = struct.unpack_from("<I", data, 0)[0]
@@ -86,6 +88,4 @@ def build_ch(node_count, tails, heads, weights, log=print) -> ContractionHierarc
 
 def build_graph_ch(graph, log=print) -> ContractionHierarchy:
     """Contraction hierarchy of a RoadGraph, on its travel-time weights."""
-    edges = graph.edges
-    return build_ch(len(graph.nodes), [e.source for e in edges], [e.target for e in edges],
-                    [e.weight for e in edges], log)
+    return build_ch(graph.node_count, graph.source, graph.target, graph.weight, log)

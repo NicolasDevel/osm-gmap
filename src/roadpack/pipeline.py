@@ -19,11 +19,12 @@ def build(pbf: Path, bbox, profile: Profile, out: Path, chunk_dir: Path | None =
     log(f"Reading {pbf} (bbox {', '.join(f'{v:g}' for v in bbox)}, profile {profile.name}) ...")
     network = load_roads(pbf, bbox, profile)
     t_load = time.time() - t0
-    log(f"  {len(network.ways):,} drivable ways, {len(network.coords):,} OSM nodes ({t_load:.0f} s)")
+    log(f"  {network.way_count:,} drivable ways, {network.node_count:,} OSM nodes ({t_load:.0f} s)")
 
     graph = build_graph(network, cell_deg, simplify_tolerance_m)
     del network
-    log(f"  graph: {len(graph.nodes):,} nodes, {len(graph.edges):,} edges; contracting ...")
+    log(f"  graph: {graph.node_count:,} nodes, {graph.edge_count:,} edges ({graph.stats['graph_seconds']:.0f} s); "
+        "contracting ...")
 
     t_ch = time.time()
     ch = build_graph_ch(graph, log)
@@ -33,8 +34,8 @@ def build(pbf: Path, bbox, profile: Profile, out: Path, chunk_dir: Path | None =
     sections = write_gmap(graph, ch, out)
     stats = {
         **graph.stats,
-        "nodes": len(graph.nodes),
-        "edges": len(graph.edges),
+        "nodes": graph.node_count,
+        "edges": graph.edge_count,
         "ch_forward_arcs": ch.forward_arcs,
         "ch_backward_arcs": ch.backward_arcs,
         "sections": sections,

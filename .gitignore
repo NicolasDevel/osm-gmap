@@ -7,3 +7,4 @@ third_party/
 *.egg-info/
 dist/
 .pytest_cache/
+data/

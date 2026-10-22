@@ -27,20 +27,27 @@ def written(town, tmp_path_factory):
 def test_round_trip_nodes_and_edges(written):
     graph, _, path, _ = written
     g = Gmap(path)
-    assert g.node_count == len(graph.nodes) and g.edge_count == len(graph.edges)
-    for n, (lat, lon) in enumerate(graph.nodes):
-        assert (g.lat[n], g.lon[n]) == (round(lat * SCALE) / SCALE, round(lon * SCALE) / SCALE)
-        assert g.first_edge[n] == graph.first_edge[n]
-    assert g.first_edge[-1] == g.edge_count  # sentinel
-    for i, e in enumerate(graph.edges):
-        seg = graph.segments[e.segment]
-        assert (g.source[i], g.target[i]) == (e.source, e.target)
-        assert (g.length[i], g.weight[i], g.speed[i], g.flags[i]) == (e.length_m, e.weight, e.speed, e.flags)
-        assert g.name(i) == seg.way.name
-        interior = g.polyline(i)[1:-1]
-        expected = seg.interior if e.source == seg.a else seg.interior[::-1]
-        assert interior == pytest.approx(expected, abs=1e-7)
-        assert (g.geom[i] == NONE) == (not seg.interior)
+    assert g.node_count == graph.node_count and g.edge_count == graph.edge_count
+    assert g.lat[:-1] == (graph.lat7 / SCALE).tolist() and g.lon[:-1] == (graph.lon7 / SCALE).tolist()  # + sentinel
+    assert g.first_edge == graph.first_edge.tolist() and g.first_edge[-1] == g.edge_count  # sentinel
+    assert (g.source, g.target) == (graph.source.tolist(), graph.target.tolist())
+    assert g.length == graph.length_m.tolist() and g.weight == graph.weight.tolist()
+    assert g.speed == graph.speed.tolist() and g.flags == graph.flags.tolist()
+    for i, s in enumerate(graph.segment.tolist()):
+        n = graph.seg_name[s]
+        assert g.name(i) == (graph.names[n] if n >= 0 else "")
+        interior = graph.interior(s)
+        expected = interior if graph.source[i] == graph.seg_a[s] else interior[::-1]
+        assert g.polyline(i)[1:-1] == pytest.approx(expected, abs=1e-7)
+        assert (g.geom[i] == NONE) == (not interior)
+
+
+def test_osm_ids_follow_the_nodes(town, written):
+    graph = written[0]
+    # The OSM builder numbers nodes in creation order; "A" is the first node of the town.
+    a = next(i for i, (lat, lon) in enumerate(zip(graph.lat7, graph.lon7))
+             if (lat / SCALE, lon / SCALE) == pytest.approx(town.points["A"], abs=1e-7))
+    assert graph.osm_ids[a] == 1
 
 
 def test_header_and_sections(written):

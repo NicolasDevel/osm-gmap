@@ -22,29 +22,37 @@ def bearing(a, b):
     return math.degrees(math.atan2(x, y)) % 360
 
 
-def simplify(points, tolerance_m):
-    """Douglas-Peucker in meters (local equirectangular projection). Always keeps both endpoints."""
-    if len(points) <= 2:
-        return points
-    k = math.cos(math.radians(points[0][0]))
-    xy = [(lon * k * 111_320, lat * 110_540) for lat, lon in points]
-    keep = [False] * len(points)
+def simplify_indices(lats, lons, tolerance_m):
+    """Douglas-Peucker in meters (local equirectangular projection): indices of the points to keep, in order.
+    Always keeps both endpoints."""
+    n = len(lats)
+    if n <= 2:
+        return list(range(n))
+    k = math.cos(math.radians(lats[0]))
+    xs = [lon * k * 111_320 for lon in lons]
+    ys = [lat * 110_540 for lat in lats]
+    keep = [False] * n
     keep[0] = keep[-1] = True
-    stack = [(0, len(points) - 1)]
+    stack = [(0, n - 1)]
     while stack:
         i, j = stack.pop()
-        (x1, y1), (x2, y2) = xy[i], xy[j]
+        x1, y1, x2, y2 = xs[i], ys[i], xs[j], ys[j]
         dx, dy = x2 - x1, y2 - y1
         norm = math.hypot(dx, dy) or 1e-9
         best, best_d = -1, tolerance_m
         for m in range(i + 1, j):
-            d = abs(dy * (xy[m][0] - x1) - dx * (xy[m][1] - y1)) / norm
+            d = abs(dy * (xs[m] - x1) - dx * (ys[m] - y1)) / norm
             if d > best_d:
                 best, best_d = m, d
         if best >= 0:
             keep[best] = True
             stack += [(i, best), (best, j)]
-    return [p for p, k_ in zip(points, keep) if k_]
+    return [i for i in range(n) if keep[i]]
+
+
+def simplify(points, tolerance_m):
+    """Douglas-Peucker on [(lat, lon)]; see simplify_indices."""
+    return [points[i] for i in simplify_indices([p[0] for p in points], [p[1] for p in points], tolerance_m)]
 
 
 def morton(row, col):
