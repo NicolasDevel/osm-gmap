@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 RESULTS = Path(__file__).resolve().parent / "results"
 README = Path(__file__).resolve().parent / "README.md"
+SCALING = ROOT / "docs" / "SCALING.md"
 
 # name, label, group, extract
 REGIONS = [
@@ -146,17 +147,40 @@ def render_tables(results):
                          f"~{x['estimated_mb']:,.1f} MB |")
         admin_tables[f"ADMIN-{a['region']}"] = "\n".join(lines)
 
+    validation_file = RESULTS / "validation.json"
+    validation = json.loads(validation_file.read_text()) if validation_file.exists() else {}
+    lines = ["| Region | Routes checked | Same cost | Pairs without a route (skipped) | Time |", "|---|---:|---:|---:|---:|"]
+    for name, *_ in REGIONS:
+        if name in validation:
+            v = validation[name]
+            same = "all" if not v["mismatches"] else f"**{v['routes'] - v['mismatches']}**"
+            lines.append(f"| {v['label']} | {v['routes']} | {same} | {v['unreachable_skipped']} | {v['seconds']:.0f} s |")
+    total = sum(v["routes"] for v in validation.values())
+    bad = sum(v["mismatches"] for v in validation.values())
+    lines.append(f"| **Total** | **{total:,}** | **{'all' if not bad else total - bad}** | | |")
+    validation_table = "\n".join(lines)
+
+    lines = ["| Region | Road nodes in OSM | Load | Graph | CH | Total | Peak RAM |", "|---|---:|---:|---:|---:|---:|---:|"]
+    for r in sorted((r for r in results if r["group"] != "city"), key=lambda r: r["build"]["osm_nodes"]):
+        b = r["build"]
+        lines.append(f"| {r['label']} | {b['osm_nodes'] / 1e6:,.1f} M | {b['load_seconds']:.0f} s | "
+                     f"{b['graph_seconds']:.0f} s | {b['ch_seconds']:.0f} s | {b['seconds']:.0f} s | "
+                     f"{b['peak_rss'] / 2**30:.1f} GB |")
+    timing_table = "\n".join(lines)
+
     machines = sorted({r["machine"] for r in results})
     dates = sorted({r["extract"]["date"] for r in results if r["extract"]["date"]})
-    text = README.read_text() if README.exists() else ""
-    for tag, table in (("SIZE", size_table), ("ROUTES", route_table), ("SECTIONS", section_table),
-                       ("META", f"Measured on {', '.join(machines)}; OSM data from {dates[0]} to {dates[-1]}."
-                                if dates else ""), *admin_tables.items()):
-        start, end = f"<!-- {tag} -->", f"<!-- /{tag} -->"
-        if start in text:
-            before, rest = text.split(start, 1)
-            text = before + start + "\n" + table + "\n" + end + rest.split(end, 1)[1]
-    README.write_text(text)
+    tables = {"SIZE": size_table, "ROUTES": route_table, "SECTIONS": section_table, "VALIDATION": validation_table,
+              "TIMING": timing_table, **admin_tables,
+              "META": f"Measured on {', '.join(machines)}; OSM data from {dates[0]} to {dates[-1]}." if dates else ""}
+    for doc in (README, SCALING):
+        text = doc.read_text()
+        for tag, table in tables.items():
+            start, end = f"<!-- {tag} -->", f"<!-- /{tag} -->"
+            if start in text:
+                before, rest = text.split(start, 1)
+                text = before + start + "\n" + table + "\n" + end + rest.split(end, 1)[1]
+        doc.write_text(text)
 
 
 def main():
@@ -181,7 +205,8 @@ def main():
                 print(f"!! {label}: {e}")
                 continue
             result_file.write_text(json.dumps(result, indent=2) + "\n")
-    render_tables([json.loads(p.read_text()) for p in sorted(RESULTS.glob("*.json")) if not p.name.startswith("admin-")])
+    render_tables([json.loads(p.read_text()) for p in sorted(RESULTS.glob("*.json"))
+                   if not p.name.startswith("admin-") and p.name != "validation.json"])
 
 
 if __name__ == "__main__":

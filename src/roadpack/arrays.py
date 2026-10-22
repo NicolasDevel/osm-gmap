@@ -1,5 +1,5 @@
-"""numpy helpers. np.unique is avoided on large arrays: since numpy 2.3 it may use a hash table that takes
-~10× the memory of sorting."""
+"""numpy helpers. np.unique is avoided on large arrays: recent numpy versions may use a hash table that takes
+several times the memory of sorting (1 GB for 10 million ids)."""
 import numpy as np
 
 

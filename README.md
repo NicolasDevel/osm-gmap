@@ -48,6 +48,11 @@ A few of the [benchmarks](benchmarks/README.md) (motorcycle profile, 200 random 
 | Spain | 3.28 M | 620 MB | 126 s | 550 km | 459 | 578 k |
 | Brazil | 10.1 M | 2.5 GB | 8 min | 1,690 km | 630 | 3.4 M |
 
+Large countries go through the same code as a city: two passes over the extract and columnar numpy arrays keep
+Brazil at 8 GB of RAM. Side by side with the original pure-Python builder, the output is byte-identical for
+Bogotá, Colombia and California, and the same graph for Spain (one pair of duplicated OSM nodes is numbered the
+other way). Every map is checked route by route against A*. See [how large regions are built](docs/SCALING.md).
+
 The `.gmap` v2 format addresses up to 4 GiB and about 164° of longitude, so a country like the United States
 is built per state.
 

@@ -2,7 +2,8 @@
 
 Every region is built from a public OpenStreetMap extract with the default motorcycle profile, then 200 random
 pairs of nodes are routed the way a device would do it. To regenerate: `benchmarks/download.sh`, then
-`python benchmarks/run.py`.
+`python benchmarks/run.py`. How the large countries fit in a laptop, and the evidence that they are complete
+and exact maps, is in [docs/SCALING.md](../docs/SCALING.md).
 
 <!-- META -->
 Measured on arm64 Darwin, 10 cores; OSM data from 2026-05-09 to 2026-10-20.
