@@ -1,85 +1,143 @@
 # roadpack
 
-Compact OpenStreetMap road graphs for microcontrollers.
+[![tests](https://github.com/NicolasDevel/roadpack/actions/workflows/tests.yml/badge.svg)](https://github.com/NicolasDevel/roadpack/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 
-`roadpack` turns an OpenStreetMap extract (`.osm.pbf`) into a `.gmap`: a binary road graph with a precomputed
-**contraction hierarchy**, laid out so a device with a few MB of RAM can route straight from a microSD card
-without loading the map. It powers an offline motorcycle navigator on an ESP32-S3, which routes the 977 km
-from Bogotá to Cartagena in about 8 seconds.
+**Turn-by-turn routing on a microcontroller, offline, for a whole country.**
 
-## Install
+roadpack compiles an OpenStreetMap extract into a `.gmap`: a compact binary road graph with a precomputed
+**contraction hierarchy**, laid out so that a device with a few MB of RAM routes straight from a microSD card,
+without ever loading the map. All of Colombia is 287 MB, and an ESP32-S3 finds the ~970 km route from Bogotá to
+Cartagena in about 8 seconds.
+
+[Leer en español](README.es.md)
+
+![All of Colombia's road graph with the Bogotá–Cartagena route, and three maneuver screens of the round display](docs/img/hero.png)
+
+## Why
+
+Routing engines like OSRM, Valhalla or GraphHopper are built for servers and phones, with an operating system, a
+file system and plenty of memory. A microcontroller has a few MB of RAM, a FAT-formatted SD card that reads a few
+MB per second, and no operating system. roadpack is not a routing engine: it is the build step that produces a
+map such a device can route on.
+
+- **Only what routing needs.** Drivable roads for a vehicle profile; graph nodes only at intersections and dead
+  ends (13 to 47 % of the OSM road nodes); shapes simplified to 2 m.
+- **Few nodes per route.** The contraction hierarchy settles a few hundred nodes for a route across a country,
+  where A* settles hundreds of thousands (Colombia: 275 against 458,000, median of 200 random routes).
+- **Read in place.** Fixed-size little-endian records, nodes in Z-order so that nearby roads sit in the same SD
+  card pages, a sparse spatial grid to snap a GPS fix, and the file split into 4 MiB chunks because FAT without
+  fast seek is slow on large files.
+- **Verified.** The hierarchy matches A* on 2,200 random routes across 22 regions, and the builder's output is
+  checked against the original reference implementation ([how](docs/SCALING.md)).
+
+It was built for, and runs on, an offline motorcycle navigator: a Waveshare ESP32-S3 with a 466×466 round AMOLED
+display, reading the map from a microSD card.
+
+## Quick start
 
 ```bash
 pip install git+https://github.com/NicolasDevel/roadpack.git
-```
 
-Building the contraction hierarchy needs `git` and a C++17 compiler: the first build fetches
-[RoutingKit](https://github.com/RoutingKit/RoutingKit) and compiles a small helper into `~/.cache/roadpack`.
+# Any extract from https://download.geofabrik.de or https://extract.bbbike.org
+roadpack build colombia-latest.osm.pbf -o out/colombia.gmap                 # the whole extract
+roadpack build colombia-latest.osm.pbf --region bogota -o out/bogota.gmap   # or --bbox minlat,minlon,maxlat,maxlon
 
-## Usage
-
-```bash
-# An extract from https://download.geofabrik.de, e.g. Colombia: the whole file, or a part of it
-roadpack build colombia-latest.osm.pbf -o out/colombia.gmap
-roadpack build colombia-latest.osm.pbf --region bogota -o out/bogota.gmap
-roadpack build colombia-latest.osm.pbf --bbox 4.45,-74.25,4.84,-73.98 --profile car -o out/bogota-car.gmap
-
-roadpack info out/bogota.gmap
+roadpack info  out/bogota.gmap
 roadpack route out/bogota.gmap --from 4.5981,-74.0760 --to 4.6766,-74.0482 --check --images out/preview
 roadpack stats out/bogota.gmap --routes 200
 ```
 
-`build` writes `out/bogota.gmap` and `out/bogota/`, the same file split into 4 MiB chunks for a FAT SD card.
-`route` routes like a device would and prints the maneuvers; `--check` compares against A* on the full graph
-and `--images` renders the route and each maneuver screen.
+```
+Route: 13.9 km, ~19 min, 155 edges, 11 maneuvers
+  contraction hierarchy settled 293 nodes in 1 ms (Python)
+  A* on the full graph settled 19,263 nodes in 30 ms: same cost
 
-`stats` routes between random pairs of nodes and reports how many nodes the contraction hierarchy settles and
-how many KB of the file each route reads, which is what an SD card has to deliver.
+    0.00 km  (+    0 m)  Head out onto Calle 11
+    0.55 km  (+  550 m)  Turn left onto Avenida Calle 7
+    0.67 km  (+  120 m)  Turn left onto Carrera 5
+   ...
+```
+
+- `build` writes the `.gmap` and the same file split into chunks for the SD card (`out/bogota/0000.bin`, …).
+  `--profile car` applies car access and one-way rules instead of motorcycle ones.
+- `route` routes like a device would and prints the maneuvers; `--check` compares with A* on the full graph,
+  `--images` renders the route and each maneuver screen.
+- `stats` routes between random pairs of nodes and reports the nodes settled and the KB of the file each route
+  reads, which is what the SD card has to deliver.
+
+The first build fetches [RoutingKit](https://github.com/RoutingKit/RoutingKit) and compiles a small helper into
+`~/.cache/roadpack`: it needs `git` and a C++17 compiler.
+
+## How it works
+
+```mermaid
+flowchart LR
+    pbf[".osm.pbf"] --> load["Load<br/>highway ways, then their nodes<br/>(two passes, filtered in C++)"]
+    load --> graph["Graph<br/>split at intersections<br/>simplify shapes · Z-order<br/>spatial grid"]
+    graph --> ch["Contraction hierarchy<br/>(RoutingKit)"]
+    ch --> gmap[".gmap<br/>+ 4 MiB chunks"]
+    gmap --> sd["microSD"] --> mcu["Microcontroller<br/>bidirectional upward Dijkstra<br/>through a small page cache"]
+```
+
+```
+┌────────┬────────────┬──────────┬──────────────┬──────────┬───────┬────────────┬─────────────┐
+│ header │ nodes      │ edges    │ spatial grid │ geometry │ names │ CH forward │ CH backward │
+│ 72 B   │ 12 B × N+1 │ 28 B × E │ sparse       │ variable │ UTF-8 │            │             │
+└────────┴────────────┴──────────┴──────────────┴──────────┴───────┴────────────┴─────────────┘
+```
+
+A device answers a query by running Dijkstra from both ends, only ever going up in the hierarchy, then unpacking
+the shortcuts into real edges. The format, byte by byte, and the query are in [FORMAT.md](FORMAT.md); the Python
+reader in `roadpack.format` and the router in `roadpack.routing` are the reference implementation.
 
 ## Results
 
-A few of the [benchmarks](benchmarks/README.md) (motorcycle profile, 200 random routes per region):
+From the [benchmarks](benchmarks/README.md): motorcycle profile, 200 random routes per region, on a 16 GB laptop.
 
-| Region | Graph nodes | `.gmap` | Build | Median route | Nodes settled (median) | A* settles |
-|---|---:|---:|---:|---:|---:|---:|
-| Bogotá | 89 k | 15 MB | 2 s | 14 km | 236 | 31 k |
-| London | 415 k | 62 MB | 10 s | 31 km | 370 | 84 k |
-| Colombia | 1.26 M | 287 MB | 52 s | 617 km | 275 | 458 k |
-| Spain | 3.28 M | 620 MB | 126 s | 550 km | 459 | 578 k |
-| Brazil | 10.1 M | 2.5 GB | 8 min | 1,690 km | 630 | 3.4 M |
+| Region | Graph nodes | `.gmap` | Build | Median route | Nodes settled (median) | A* settles | KB read per query |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Bogotá | 89 k | 15 MB | 2 s | 14 km | 236 | 31 k | 972 |
+| London | 415 k | 62 MB | 10 s | 31 km | 370 | 84 k | 1,976 |
+| Tokyo | 235 k | 42 MB | 7 s | 17 km | 438 | 82 k | 1,936 |
+| Colombia | 1.26 M | 287 MB | 52 s | 617 km | 275 | 458 k | 2,980 |
+| Spain | 3.28 M | 620 MB | 2 min | 550 km | 459 | 578 k | 3,664 |
+| California | 2.89 M | 513 MB | 80 s | 522 km | 523 | 614 k | 4,296 |
+| Brazil | 10.1 M | 2.5 GB | 8 min | 1,690 km | 630 | 3.4 M | 7,684 |
 
-Large countries go through the same code as a city: two passes over the extract and columnar numpy arrays keep
-Brazil at 8 GB of RAM. Side by side with the original pure-Python builder, the output is byte-identical for
-Bogotá, Colombia and California, and the same graph for Spain (one pair of duplicated OSM nodes is numbered the
-other way). Every map is checked route by route against A*. See [how large regions are built](docs/SCALING.md).
+The benchmarks also cover Mexico City, Lima, Buenos Aires, Santiago, Washington DC, Ottawa, Toronto, New York,
+Madrid, Barcelona, Paris, Berlin, Canada, Texas, New York State and Colombia by department.
+[How large countries fit in a laptop, and the evidence that they are exact](docs/SCALING.md).
 
-The `.gmap` v2 format addresses up to 4 GiB and about 164° of longitude, so a country like the United States
-is built per state.
+## Limits
 
-## Layout
+- The `.gmap` v2 format addresses 4 GiB and about 164° of longitude: Brazil fits (2.5 GB); the whole United
+  States does not, so it is built per state.
+- Building needs at least about 1.5 GB of RAM, and 8 GB for Brazil.
+- No turn restrictions yet, and speeds come from `maxspeed` or a default per road class (no traffic).
+- The microcontroller side is specified in FORMAT.md and implemented in Python here; a portable C reader is
+  planned.
+
+## Project layout
 
 | Module | Layer |
 |---|---|
 | `roadpack.osm` | Loading: drivable ways of an OSM extract for a vehicle profile (`motorcycle`, `car`) |
-| `roadpack.graph` | Graph: segments between intersections, simplified geometry, Morton order, spatial grid |
+| `roadpack.graph` | Graph: segments between intersections, simplified geometry, Z-order, spatial grid (numpy) |
 | `roadpack.ch` | Contraction hierarchy (RoutingKit, `build_ch.cpp`) |
 | `roadpack.format` | The `.gmap` format: writer, reader, SD card chunks |
 | `roadpack.routing` | Reference routing: CH query, A*, turn-by-turn maneuvers |
-| `roadpack.preview` | PNG of a route and of each maneuver on a round 466×466 display |
-| `roadpack.cli` | The `roadpack` command |
-
-The binary format is specified in [FORMAT.md](FORMAT.md).
-
-## Tests
+| `roadpack.stats`, `roadpack.preview` | Route sampling; PNG of a route and of each maneuver screen |
+| `benchmarks/` | Benchmark, validation and reference-comparison scripts, with their results |
 
 ```bash
 pip install -e '.[test]' && pytest
 ```
 
-The tests build small synthetic OpenStreetMap files: a hand-made town that exercises every rule (one-ways,
-access tags per vehicle, roundabouts, loops, parking aisles, roads crossing the bounding box, geometry
-simplification) and random street grids, on which the contraction hierarchy must match Dijkstra on every pair
-of nodes.
+The tests build small synthetic OpenStreetMap files (a hand-made town that exercises every rule, and random
+street grids) and check, among other things, that the contraction hierarchy matches Dijkstra on every pair of
+nodes.
 
 ## Licenses
 
