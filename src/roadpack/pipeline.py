@@ -1,0 +1,47 @@
+"""The whole pipeline: OSM extract -> drivable ways -> compact graph -> contraction hierarchy -> .gmap file."""
+import time
+from pathlib import Path
+
+from .ch import build_graph_ch
+from .format import CHUNK_SIZE, write_chunks, write_gmap
+from .graph import CELL_DEG, SIMPLIFY_TOLERANCE_M, build_graph
+from .osm import Profile, load_roads
+
+
+def _log(message):
+    print(message, flush=True)
+
+
+def build(pbf: Path, bbox, profile: Profile, out: Path, chunk_dir: Path | None = None, chunk_size=CHUNK_SIZE,
+          cell_deg=CELL_DEG, simplify_tolerance_m=SIMPLIFY_TOLERANCE_M, log=_log) -> dict:
+    """Build out (a .gmap) from pbf, and split it into chunk_dir if given. Returns the build statistics."""
+    t0 = time.time()
+    log(f"Reading {pbf} (bbox {', '.join(f'{v:g}' for v in bbox)}, profile {profile.name}) ...")
+    network = load_roads(pbf, bbox, profile)
+    t_load = time.time() - t0
+    log(f"  {len(network.ways):,} drivable ways, {len(network.coords):,} OSM nodes ({t_load:.0f} s)")
+
+    graph = build_graph(network, cell_deg, simplify_tolerance_m)
+    del network
+    log(f"  graph: {len(graph.nodes):,} nodes, {len(graph.edges):,} edges; contracting ...")
+
+    t_ch = time.time()
+    ch = build_graph_ch(graph, log)
+    t_ch = time.time() - t_ch
+    log(f"  contraction hierarchy: {ch.forward_arcs:,} forward + {ch.backward_arcs:,} backward arcs ({t_ch:.0f} s)")
+
+    sections = write_gmap(graph, ch, out)
+    stats = {
+        **graph.stats,
+        "nodes": len(graph.nodes),
+        "edges": len(graph.edges),
+        "ch_forward_arcs": ch.forward_arcs,
+        "ch_backward_arcs": ch.backward_arcs,
+        "sections": sections,
+        "load_seconds": t_load,
+        "ch_seconds": t_ch,
+    }
+    if chunk_dir is not None:
+        stats["chunks"] = write_chunks(out, chunk_dir, chunk_size)
+    stats["total_seconds"] = time.time() - t0
+    return stats

@@ -1,15 +1,15 @@
-// Construye la jerarquía de contracción (CH) de un grafo con RoutingKit y la escribe reorganizada por número
-// de nodo (no por rango), para que en la SD los nodos cercanos queden cerca.
+// Builds the contraction hierarchy (CH) of a graph with RoutingKit and writes it reorganized by node number
+// (not by rank), so that nodes close on the map stay close on the SD card.
 //
-// Entrada (little-endian): u32 node_count, u32 arc_count, u32 tail[arc_count], u32 head[arc_count],
-//                          u32 weight[arc_count]
-// Salida  (little-endian), para cada lado (primero forward, luego backward):
-//          u32 arc_count, u32 first_out[node_count + 1], arcos[arc_count] de 16 bytes:
-//          u32 other (cabeza en forward, cola en backward), u32 weight, u32 a, u32 b
-//          Arco original: a = ORIGINAL | id de la arista de entrada, b = 0.
-//          Atajo: a = arco del lado backward, b = arco del lado forward (sus dos mitades).
+// Input  (little-endian): u32 node_count, u32 arc_count, u32 tail[arc_count], u32 head[arc_count],
+//                         u32 weight[arc_count]
+// Output (little-endian), for each side (forward first, then backward):
+//          u32 arc_count, u32 first_out[node_count + 1], arcs[arc_count] of 16 bytes:
+//          u32 other (head in forward, tail in backward), u32 weight, u32 a, u32 b
+//          Original arc: a = ORIGINAL | id of the input arc, b = 0.
+//          Shortcut: a = arc of the backward side, b = arc of the forward side (its two halves).
 //
-// Uso: build_ch entrada.bin salida.bin
+// Usage: build_ch input.bin output.bin
 
 #include <routingkit/contraction_hierarchy.h>
 
@@ -31,8 +31,8 @@ static std::vector<uint32_t> readArray(std::ifstream &in, size_t n) {
 
 static void writeU32(std::ofstream &out, uint32_t v) { out.write(reinterpret_cast<const char *>(&v), 4); }
 
-// Reordena un lado de la CH: de índices por rango a índices por número de nodo.
-// newArc[old] da la nueva posición de cada arco, para poder reescribir las referencias de los atajos.
+// Reorders one side of the CH: from rank-indexed to node-indexed.
+// newArc[old] is the new position of each arc, used to rewrite the references inside shortcuts.
 static void reorder(const ContractionHierarchy &ch, const ContractionHierarchy::Side &side, std::vector<uint32_t> &firstOut,
                     std::vector<uint32_t> &newArc) {
   const uint32_t n = ch.node_count();
@@ -55,7 +55,7 @@ static void writeSide(std::ofstream &out, const ContractionHierarchy &ch, const 
   std::vector<uint32_t> rec(arcs * 4);
   for (size_t old = 0; old < arcs; old++) {
     uint32_t *r = &rec[newArc[old] * 4];
-    r[0] = ch.order[side.head[old]];  // de rango a número de nodo
+    r[0] = ch.order[side.head[old]];  // rank -> node number
     r[1] = side.weight[old];
     if (side.is_shortcut_an_original_arc.is_set(old)) {
       r[2] = ORIGINAL | side.shortcut_first_arc[old];
@@ -72,7 +72,7 @@ static void writeSide(std::ofstream &out, const ContractionHierarchy &ch, const 
 
 int main(int argc, char **argv) {
   if (argc != 3) {
-    std::cerr << "uso: build_ch entrada.bin salida.bin\n";
+    std::cerr << "usage: build_ch input.bin output.bin\n";
     return 2;
   }
   std::ifstream in(argv[1], std::ios::binary);
@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
   in.read(reinterpret_cast<char *>(&arcCount), 4);
   std::vector<unsigned> tail = readArray(in, arcCount), head = readArray(in, arcCount), weight = readArray(in, arcCount);
   if (!in) {
-    std::cerr << "entrada incompleta\n";
+    std::cerr << "truncated input\n";
     return 1;
   }
 
@@ -96,6 +96,6 @@ int main(int argc, char **argv) {
   std::ofstream out(argv[2], std::ios::binary);
   writeSide(out, ch, ch.forward, fwdFirst, newForward, newBackward, newForward);
   writeSide(out, ch, ch.backward, bwdFirst, newBackward, newBackward, newForward);
-  std::cerr << "  [ch] " << ch.forward.head.size() << " arcos forward, " << ch.backward.head.size() << " arcos backward\n";
+  std::cerr << "  [ch] " << ch.forward.head.size() << " forward arcs, " << ch.backward.head.size() << " backward arcs\n";
   return out ? 0 : 1;
 }

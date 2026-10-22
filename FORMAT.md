@@ -1,152 +1,153 @@
-# Formato `.gmap` v2
+# The `.gmap` v2 format
 
-Grafo vial de una región, pensado para leerse desde la microSD con `fseek` + `fread`, sin parsear texto y
-**sin cargarlo completo en memoria**: la placa lee por páginas con una caché pequeña. Incluye una
-**jerarquía de contracción (CH)** precalculada para rutear distancias largas visitando pocos nodos.
+The road graph of a region, designed to be read from a microSD card with `seek` + `read`: no text parsing and
+**no need to load it in memory**. A device reads it in pages through a small cache. It carries a precomputed
+**contraction hierarchy (CH)** so long routes settle only a few hundred nodes.
 
-Todo es **little-endian** (igual que el ESP32-S3). Las coordenadas son enteros en grados × 10⁷ (≈ 1,1 cm).
-`0xFFFFFFFF` significa "no hay" en las referencias de 32 bits.
+Everything is **little-endian** (like the ESP32 and most ARM MCUs). Coordinates are integers in degrees × 10⁷
+(≈ 1.1 cm). `0xFFFFFFFF` means "none" in 32-bit references.
 
 ```
-┌──────────┬────────────┬───────────┬─────────────────┬────────────┬─────────┬────────────┬─────────────┐
-│ cabecera │ nodos      │ aristas   │ índice espacial │ geometría  │ nombres │ CH forward │ CH backward │
-│ 72 B     │ 12 B × N+1 │ 28 B × E  │ disperso        │ variable   │ UTF-8   │            │             │
-└──────────┴────────────┴───────────┴─────────────────┴────────────┴─────────┴────────────┴─────────────┘
+┌────────┬────────────┬──────────┬──────────────┬──────────┬───────┬────────────┬─────────────┐
+│ header │ nodes      │ edges    │ spatial grid │ geometry │ names │ CH forward │ CH backward │
+│ 72 B   │ 12 B × N+1 │ 28 B × E │ sparse       │ variable │ UTF-8 │            │             │
+└────────┴────────────┴──────────┴──────────────┴──────────┴───────┴────────────┴─────────────┘
 ```
 
-Los nodos están ordenados por **curva Z (Morton)** de su celda del índice espacial: lo que está cerca en el
-mapa, en cualquier dirección, está cerca en el archivo. Aristas, geometría y CH siguen ese mismo orden. Así
-la caché de páginas de la placa acierta casi siempre.
+Nodes are sorted along a **Z-order (Morton) curve** of their spatial grid cell: what is close on the map, in
+any direction, is close in the file. Edges, geometry and the CH follow the same order, so a device's page
+cache almost always hits.
 
-## En la microSD
+## On the SD card
 
-El archivo se guarda **partido en pedazos de 4 MiB** dentro de una carpeta: `/maps/<región>/0000.bin`,
-`0001.bin`, … (los genera `build_graph.py` en `out/<región>/`). Para la placa es un solo archivo continuo.
+The file is stored **split into 4 MiB chunks** inside a directory: `/maps/<region>/0000.bin`, `0001.bin`, …
+(`roadpack build` writes them next to the `.gmap`). To the device they are one continuous file.
 
-El motivo: el núcleo de Arduino trae FAT sin *fast seek*, y saltar hacia atrás dentro de un archivo de
-cientos de MB recorre toda la cadena de clústeres (medido: ~12 ms por lectura). Con pedazos de 4 MiB el salto
-es corto y se abren pocos archivos (cada apertura cuesta ~17 ms en la placa).
+Why: the Arduino ESP32 core ships FAT without *fast seek*, and seeking backwards inside a file of hundreds of
+MB walks the whole cluster chain (measured: ~12 ms per read). With 4 MiB chunks the seeks are short and few
+files are opened (each open costs ~17 ms on the device).
 
-## Cabecera (72 bytes)
+## Header (72 bytes)
 
-| Offset | Tipo | Campo | Notas |
+| Offset | Type | Field | Notes |
 |---:|---|---|---|
 | 0 | char[4] | magic | `GMAP` |
 | 4 | u16 | version | `2` |
 | 6 | u16 | header_size | `72` |
 | 8 | u32 | node_count | N |
 | 12 | u32 | edge_count | E |
-| 16 | i32 ×4 | min_lat, min_lon, max_lat, max_lon | extensión de la red; (min_lat, min_lon) es el origen del índice |
-| 32 | u32 | cell_size | lado de la celda del índice, en grados × 10⁷ |
+| 16 | i32 ×4 | min_lat, min_lon, max_lat, max_lon | extent of the network; (min_lat, min_lon) is the grid origin |
+| 32 | u32 | cell_size | side of a grid cell, in degrees × 10⁷ |
 | 36 | u16 | grid_cols | |
 | 38 | u16 | grid_rows | |
-| 40 | u32 | nodes_off | offsets absolutos de cada sección |
+| 40 | u32 | nodes_off | absolute offset of each section |
 | 44 | u32 | edges_off | |
 | 48 | u32 | grid_off | |
 | 52 | u32 | geom_off | |
 | 56 | u32 | names_off | |
-| 60 | u32 | ch_fwd_off | alineado a 4 bytes |
+| 60 | u32 | ch_fwd_off | 4-byte aligned |
 | 64 | u32 | ch_bwd_off | |
-| 68 | u32 | file_size | para validar que el archivo esté completo |
+| 68 | u32 | file_size | to check the file is complete |
 
-## Nodos (12 bytes, N + 1 registros)
+## Nodes (12 bytes, N + 1 records)
 
-Cada nodo es una **intersección o un extremo de vía**; los puntos intermedios de las calles no son nodos.
+Each node is an **intersection or the end of a way**; the points along a street are not nodes.
 
-| Offset | Tipo | Campo |
+| Offset | Type | Field |
 |---:|---|---|
 | 0 | i32 | lat |
 | 4 | i32 | lon |
 | 8 | u32 | first_edge |
 
-Las aristas que salen del nodo `n` son `[first_edge(n), first_edge(n+1))` (formato CSR). El registro `N`
-es un **centinela** con `first_edge = E`.
+The edges leaving node `n` are `[first_edge(n), first_edge(n+1))` (CSR layout). Record `N` is a **sentinel**
+with `first_edge = E`.
 
-## Aristas (28 bytes, E registros)
+## Edges (28 bytes, E records)
 
-Aristas **dirigidas**: una vía de doble sentido tiene dos (una por sentido); una de un solo sentido, una.
+**Directed** edges: a two-way road has two (one per direction), a one-way road has one.
 
-| Offset | Tipo | Campo | Notas |
+| Offset | Type | Field | Notes |
 |---:|---|---|---|
-| 0 | u32 | source | nodo de origen |
-| 4 | u32 | target | nodo destino |
-| 8 | u32 | geom | offset relativo a `geom_off`, o `0xFFFFFFFF` si el tramo es recto |
-| 12 | u32 | name | offset relativo a `names_off`, o `0xFFFFFFFF` |
-| 16 | u32 | length_m | longitud real del tramo en metros |
-| 20 | u32 | weight_ds | tiempo de recorrido en décimas de segundo (`length_m × 36 / speed_kmh`, mínimo 1): el peso para rutear |
-| 24 | u8 | speed_kmh | `maxspeed` de OSM o el valor por defecto de la clase |
-| 25 | u8 | flags | ver abajo |
-| 26 | u16 | (relleno) | 0 |
+| 0 | u32 | source | source node |
+| 4 | u32 | target | target node |
+| 8 | u32 | geom | offset relative to `geom_off`, or `0xFFFFFFFF` if the segment is straight |
+| 12 | u32 | name | offset relative to `names_off`, or `0xFFFFFFFF` |
+| 16 | u32 | length_m | real length of the segment in meters |
+| 20 | u32 | weight_ds | travel time in tenths of a second (`length_m × 36 / speed_kmh`, at least 1): the routing weight |
+| 24 | u8 | speed_kmh | OSM `maxspeed`, or the default of the road class |
+| 25 | u8 | flags | see below |
+| 26 | u16 | (padding) | 0 |
 
 **flags**
 
-| Bits | Significado |
+| Bits | Meaning |
 |---|---|
-| 0-3 | clase: 0 motorway, 1 trunk, 2 primary, 3 secondary, 4 tertiary, 5 unclassified, 6 residential, 7 service/living_street |
-| 4 | `GEOM_REVERSED`: la geometría guardada va de destino a origen; recórrela al revés |
-| 5 | `ROUNDABOUT`: la arista es parte de una glorieta |
-| 6 | `LINK`: rampa o enlace (`*_link`) |
+| 0-3 | class: 0 motorway, 1 trunk, 2 primary, 3 secondary, 4 tertiary, 5 unclassified, 6 residential, 7 service/living_street |
+| 4 | `GEOM_REVERSED`: the stored geometry runs from target to source; walk it backwards |
+| 5 | `ROUNDABOUT`: the edge is part of a roundabout |
+| 6 | `LINK`: ramp or link road (`*_link`) |
 
-## Índice espacial (disperso)
+## Spatial grid (sparse)
 
-Cuadrícula de `grid_cols × grid_rows` celdas sobre la extensión de la red; solo se guardan las celdas con
-vías (para un país, la cuadrícula completa ocuparía cientos de MB). La celda de un punto es
+A grid of `grid_cols × grid_rows` cells over the extent of the network; only cells with roads are stored (for a
+country, the full grid would take hundreds of MB). The cell of a point is
 `row = (lat - min_lat) / cell_size`, `col = (lon - min_lon) / cell_size`, `id = row * grid_cols + col`.
 
-| Tipo | Campo |
+| Type | Field |
 |---|---|
-| u32 | K: cantidad de celdas no vacías |
-| u32 × K | ids de las celdas, **ordenados** (búsqueda binaria) |
-| u32 × (K+1) | inicio de cada celda en la lista de aristas |
-| u32 × … | aristas: las de la celda `k` van de `start[k]` a `start[k+1]` |
+| u32 | K: number of non-empty cells |
+| u32 × K | cell ids, **sorted** (binary search) |
+| u32 × (K+1) | start of each cell in the edge list |
+| u32 × … | edges: those of cell `k` go from `start[k]` to `start[k+1]` |
 
-Cada tramo aparece una vez por celda que toca (con una sola de sus dos direcciones). Sirve para encontrar
-la vía más cercana a la posición del GPS y las calles alrededor de un cruce.
+Each segment appears once per cell it touches (with only one of its two directions). It is used to snap a GPS
+position to the nearest road and to find the streets around a junction.
 
-## Geometría
+## Geometry
 
-Solo los **puntos intermedios** del tramo (sin los nodos de los extremos), simplificados con Douglas-Peucker
-a 2 m. Las dos direcciones de una vía comparten la misma geometría.
+Only the **interior points** of a segment (without the end nodes), simplified with Douglas-Peucker at 2 m.
+Both directions of a road share the same geometry.
 
-| Tipo | Campo |
+| Type | Field |
 |---|---|
 | u16 | count |
-| u16 | (relleno, 0) |
-| (i32 lat, i32 lon) × count | puntos |
+| u16 | (padding, 0) |
+| (i32 lat, i32 lon) × count | points |
 
-Polilínea completa de una arista = `[origen, ...puntos (al revés si GEOM_REVERSED), destino]`.
+Full polyline of an edge = `[source, ...points (reversed if GEOM_REVERSED), target]`.
 
-## Nombres
+## Names
 
-Cadenas UTF-8 terminadas en `\0`, sin repetir. Se usa `name` de OSM, o `ref` si no tiene nombre.
+UTF-8 strings terminated by `\0`, without repeats. OSM `name`, or `ref` when the way has no name.
 
-## Jerarquía de contracción
+## Contraction hierarchy
 
-La calcula `ch/build_ch` con [RoutingKit](https://github.com/RoutingKit/RoutingKit) sobre los pesos
-`weight_ds`. Cada nodo tiene un rango; la CH agrega **atajos** para que toda ruta óptima se pueda armar
-subiendo de rango desde el origen y bajando hasta el destino.
+Computed with [RoutingKit](https://github.com/RoutingKit/RoutingKit) on the `weight_ds` weights. Every node
+has a rank; the CH adds **shortcuts** so that every optimal route can be built going up in rank from the start
+and down to the goal.
 
-Cada lado (forward y backward) tiene la misma estructura, **indexada por número de nodo**:
+Both sides (forward and backward) share the same structure, **indexed by node number** (not by rank, so the
+CH keeps the Morton locality of the nodes):
 
-| Tipo | Campo |
+| Type | Field |
 |---|---|
-| u32 | A: cantidad de arcos |
-| u32 × (N+1) | first_out: los arcos del nodo `n` van de `first_out[n]` a `first_out[n+1]` |
-| 16 B × A | arcos |
+| u32 | A: number of arcs |
+| u32 × (N+1) | first_out: arcs of node `n` go from `first_out[n]` to `first_out[n+1]` |
+| 16 B × A | arcs |
 
-| Offset | Tipo | Campo | Notas |
+| Offset | Type | Field | Notes |
 |---:|---|---|---|
-| 0 | u32 | other | forward: nodo de **mayor rango** al que lleva el arco. Backward: nodo de mayor rango desde el que llega (en el sentido real de la vía, `other → n`) |
+| 0 | u32 | other | forward: the **higher-ranked** node the arc leads to. Backward: the higher-ranked node it comes from (in the real direction of the road, `other → n`) |
 | 4 | u32 | weight_ds | |
-| 8 | u32 | a | si el bit 31 está encendido: arco original, `a & 0x7FFFFFFF` es el id de la arista. Si no: primera mitad del atajo (un arco **backward**) |
-| 12 | u32 | b | atajo: segunda mitad (un arco **forward**). Arco original: 0 |
+| 8 | u32 | a | if bit 31 is set: original arc, `a & 0x7FFFFFFF` is the edge id. Otherwise: first half of the shortcut (a **backward** arc) |
+| 12 | u32 | b | shortcut: second half (a **forward** arc). Original arc: 0 |
 
-**Consulta** (ver `route_ch` en `route.py`):
-1. Dijkstra desde el origen sobre los arcos forward y, a la vez, desde el destino sobre los arcos backward.
-   Cada lado se detiene cuando su menor distancia pendiente ya no mejora la mejor ruta encontrada.
-2. La ruta pasa por el nodo de encuentro con menor suma de distancias.
-3. Cada arco se desarma recursivamente: atajo = backward(`a`) seguido de forward(`b`), hasta llegar a las
-   aristas originales.
+**Query** (see `route_ch` in `src/roadpack/routing/search.py`):
+1. Dijkstra from the start over the forward arcs and, interleaved, from the goal over the backward arcs. Each
+   side stops when its smallest pending distance can no longer improve the best route found.
+2. The route goes through the meeting node with the smallest sum of distances.
+3. Each arc is unpacked recursively: shortcut = backward(`a`) followed by forward(`b`), down to the original
+   edges.
 
-En Bogotá y Cundinamarca la consulta asienta unos **240 nodos por ruta** (máximo ~400), contra miles del A*
-sobre el grafo completo, y da exactamente el mismo costo.
+In Bogotá and Cundinamarca a query settles about **240 nodes per route** (at most ~400), against thousands for
+A* on the full graph, with exactly the same cost.

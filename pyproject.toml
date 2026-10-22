@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "roadpack"
+dynamic = ["version"]
+description = "Compact OpenStreetMap road graphs with contraction hierarchies, for routing on microcontrollers"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "NicolasDevel" }]
+keywords = ["openstreetmap", "routing", "contraction-hierarchies", "embedded", "esp32", "offline-navigation"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Software Development :: Embedded Systems",
+]
+dependencies = ["osmium>=3.6", "numpy", "pillow"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+roadpack = "roadpack.cli:main"
+
+[project.urls]
+Repository = "https://github.com/NicolasDevel/roadpack"
+
+[tool.hatch.version]
+path = "src/roadpack/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/roadpack"]

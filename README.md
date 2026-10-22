@@ -1,65 +1,62 @@
-# osm-gmap
+# roadpack
 
-Genera mapas de ruteo offline a partir de OpenStreetMap, pensados para microcontroladores con poca memoria
-(por ejemplo, un ESP32 con microSD).
+Compact OpenStreetMap road graphs for microcontrollers.
 
-Convierte un extracto `.osm.pbf` en un archivo `.gmap`: un grafo vial binario con las vías aptas para el
-vehículo elegido, geometría simplificada, nombres, un índice espacial y una **jerarquía de contracción**
-precalculada. Con ella, una ruta de 1.000 km se calcula visitando unos cientos de nodos, leyendo poco de la
-tarjeta.
+`roadpack` turns an OpenStreetMap extract (`.osm.pbf`) into a `.gmap`: a binary road graph with a precomputed
+**contraction hierarchy**, laid out so a device with a few MB of RAM can route straight from a microSD card
+without loading the map. It powers an offline motorcycle navigator on an ESP32-S3, which routes the 977 km
+from Bogotá to Cartagena in about 8 seconds.
 
-## Uso
+## Install
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-
-# Extracto de OpenStreetMap, por ejemplo https://download.geofabrik.de/south-america/colombia.html
-.venv/bin/python build_graph.py --pbf colombia-latest.osm.pbf --region colombia --out out/colombia.gmap
+pip install git+https://github.com/NicolasDevel/roadpack.git
 ```
 
-Genera `out/colombia.gmap` y `out/colombia/`, el mismo mapa partido en pedazos de 4 MB para la microSD.
+Building the contraction hierarchy needs `git` and a C++17 compiler: the first build fetches
+[RoutingKit](https://github.com/RoutingKit/RoutingKit) and compiles a small helper into `~/.cache/roadpack`.
 
-- `--profile moto` (por defecto) o `--profile carro`: qué restricciones de acceso y de sentido de OSM se
-  aplican. Se agregan más en `PROFILES` de `build_graph.py`.
-- Regiones incluidas: `bogota`, `cundinamarca`, `colombia`. Se agregan en `REGIONS` (un rectángulo de
-  latitud y longitud).
+## Usage
 
-La primera vez descarga y compila [RoutingKit](https://github.com/RoutingKit/RoutingKit) para la jerarquía
-de contracción: hace falta `git` y `clang++`.
+```bash
+# An extract from https://download.geofabrik.de, e.g. Colombia
+roadpack build colombia-latest.osm.pbf --region bogota -o out/bogota.gmap
+roadpack build colombia-latest.osm.pbf --bbox 4.45,-74.25,4.84,-73.98 --profile car -o out/bogota-car.gmap
 
-| Región | Nodos | Archivo | Generación |
+roadpack info out/bogota.gmap
+roadpack route out/bogota.gmap --from 4.5981,-74.0760 --to 4.6766,-74.0482 --check --images out/preview
+```
+
+`build` writes `out/bogota.gmap` and `out/bogota/`, the same file split into 4 MiB chunks for a FAT SD card.
+`route` routes like a device would and prints the maneuvers; `--check` compares against A* on the full graph
+and `--images` renders the route and each maneuver screen.
+
+| Region | Nodes | File | Build time |
 |---|---:|---:|---:|
-| Bogotá | 108 mil | 17 MB | ~20 s |
-| Colombia | 1,26 millones | 273 MB | ~80 s, ~4 GB de RAM |
+| Bogotá | 108 k | 17 MB | ~25 s |
+| Colombia | 1.26 M | 273 MB | ~85 s, ~4.7 GB RAM |
 
-## Probar una ruta
+## Layout
 
-```bash
-.venv/bin/python preview.py out/colombia.gmap --from 4.5981,-74.0760 --to 4.6766,-74.0482 --out out/preview
-```
-
-Imprime las maniobras y genera imágenes de la ruta y de cada maniobra. `route.py` tiene el ruteo con la
-jerarquía de contracción y un A* de referencia (dan el mismo resultado).
-
-## Archivos
-
-| Archivo | Qué hace |
+| Module | Layer |
 |---|---|
-| `build_graph.py` | OSM → `.gmap` |
-| `gmap_format.py` | Constantes del formato |
-| `gmap.py` | Lector |
-| `route.py` | Ruteo y maniobras |
-| `preview.py` | Imágenes de una ruta |
-| `ch/build_ch.cpp` | Jerarquía de contracción con RoutingKit |
-| `FORMAT.md` | Especificación del formato `.gmap` v2 |
+| `roadpack.osm` | Loading: drivable ways of an OSM extract for a vehicle profile (`motorcycle`, `car`) |
+| `roadpack.graph` | Graph: segments between intersections, simplified geometry, Morton order, spatial grid |
+| `roadpack.ch` | Contraction hierarchy (RoutingKit, `build_ch.cpp`) |
+| `roadpack.format` | The `.gmap` format: writer, reader, SD card chunks |
+| `roadpack.routing` | Reference routing: CH query, A*, turn-by-turn maneuvers |
+| `roadpack.preview` | PNG of a route and of each maneuver on a round 466×466 display |
+| `roadpack.cli` | The `roadpack` command |
 
-## Licencias
+The binary format is specified in [FORMAT.md](FORMAT.md).
 
-- El código de este repositorio: [MIT](LICENSE).
-- Los mapas generados son una base de datos derivada de OpenStreetMap, © colaboradores de OpenStreetMap,
-  bajo la [ODbL](https://opendatacommons.org/licenses/odbl/): si se distribuyen, hay que dar esa atribución
-  y compartirlos bajo la misma licencia.
-- [RoutingKit](https://github.com/RoutingKit/RoutingKit) (BSD 2-Clause) se descarga y compila al usarlo; no
-  se incluye en este repositorio.
-- Dependencias de Python: [pyosmium](https://github.com/osmcode/pyosmium) (BSD 2-Clause),
+## Licenses
+
+- This repository's code: [MIT](LICENSE).
+- Generated maps are a database derived from OpenStreetMap, © OpenStreetMap contributors, under the
+  [ODbL](https://opendatacommons.org/licenses/odbl/): if you distribute them, give that attribution and share
+  them under the same license.
+- [RoutingKit](https://github.com/RoutingKit/RoutingKit) (BSD 2-Clause) is downloaded and compiled on use; it
+  is not included in this repository.
+- Python dependencies: [pyosmium](https://github.com/osmcode/pyosmium) (BSD 2-Clause),
   [NumPy](https://numpy.org) (BSD 3-Clause), [Pillow](https://python-pillow.org) (MIT-CMU).
