@@ -1,6 +1,6 @@
 #!/bin/bash
 # Downloads the extracts of the benchmark tables into data/ (~15 GB, not in git). Resumable.
-cd "$(dirname "$0")/../data" && mkdir -p cities countries
+cd "$(dirname "$0")/.." && mkdir -p data/cities data/countries && cd data || exit 1
 for c in Bogota MexicoCity Lima BuenosAires Santiago WashingtonDC Ottawa Toronto NewYork Madrid Barcelona Paris London Berlin Tokyo; do
   curl -sfL -C - -o cities/$c.osm.pbf https://download.bbbike.org/osm/bbbike/$c/$c.osm.pbf && echo "ok $c"
 done
