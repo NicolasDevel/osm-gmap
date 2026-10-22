@@ -1,0 +1,118 @@
+{
+  "name": "santiago",
+  "label": "Santiago",
+  "group": "city",
+  "extract": {
+    "file": "Santiago.osm.pbf",
+    "bytes": 40716018,
+    "date": "2026-10-16"
+  },
+  "build": {
+    "seconds": 5.031294822692871,
+    "peak_rss": 1925496832,
+    "osm_ways": 118994,
+    "osm_nodes": 540992,
+    "segments": 235833,
+    "shape_points": 363434,
+    "shape_points_kept": 62738,
+    "graph_seconds": 0.570706844329834,
+    "nodes": 177558,
+    "edges": 404708,
+    "ch_forward_arcs": 361460,
+    "ch_backward_arcs": 361785,
+    "sections": {
+      "header": 72,
+      "nodes": 2130708,
+      "edges": 11331824,
+      "grid": 1492684,
+      "geometry": 623432,
+      "names": 427286,
+      "ch_forward": 6493600,
+      "ch_backward": 6498800,
+      "total": 28998408,
+      "unique_names": 25667,
+      "grid_cells": 22874
+    },
+    "load_seconds": 2.6795592308044434,
+    "ch_seconds": 1.660681962966919,
+    "total_seconds": 4.947747230529785
+  },
+  "map": {
+    "nodes": 177558,
+    "edges": 404708,
+    "bounds": [
+      -33.7288955,
+      -70.9732541,
+      -33.1587147,
+      -70.4226449
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 221,
+      "rows": 229,
+      "non_empty": 22874
+    },
+    "ch_arcs": {
+      "forward": 361460,
+      "backward": 361785
+    },
+    "directed_km": 27549.234,
+    "sections": {
+      "header": 72,
+      "nodes": 2130708,
+      "edges": 11331824,
+      "grid": 1492684,
+      "geometry": 623432,
+      "names": 427288,
+      "ch_forward": 6493600,
+      "ch_backward": 6498800
+    },
+    "size": 28998408,
+    "edges_by_class": {
+      "motorway": 3829,
+      "trunk": 93,
+      "primary": 16162,
+      "secondary": 26250,
+      "tertiary": 47380,
+      "unclassified": 7308,
+      "residential": 142977,
+      "service": 160709
+    }
+  },
+  "routes": {
+    "routes": 193,
+    "unreachable": 7,
+    "route_km": {
+      "median": 21.797,
+      "p95": 46.809,
+      "max": 75.151
+    },
+    "settled_nodes": {
+      "median": 343,
+      "p95": 506,
+      "max": 565
+    },
+    "query_kb_read": {
+      "median": 1492.0,
+      "p95": 2196.0,
+      "max": 2328.0
+    },
+    "route_kb_read": {
+      "median": 1688.0,
+      "p95": 2560.0,
+      "max": 2832.0
+    },
+    "python_ms": {
+      "median": 0.7378749996860279,
+      "p95": 1.4074589998926967,
+      "max": 2.0949169993400574
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 41830.0,
+    "page_size": 4096,
+    "reader_peak_rss": 107921408
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

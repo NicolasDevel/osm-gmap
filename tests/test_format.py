@@ -28,11 +28,12 @@ def test_round_trip_nodes_and_edges(written):
     graph, _, path, _ = written
     g = Gmap(path)
     assert g.node_count == graph.node_count and g.edge_count == graph.edge_count
-    assert g.lat[:-1] == (graph.lat7 / SCALE).tolist() and g.lon[:-1] == (graph.lon7 / SCALE).tolist()  # + sentinel
-    assert g.first_edge == graph.first_edge.tolist() and g.first_edge[-1] == g.edge_count  # sentinel
-    assert (g.source, g.target) == (graph.source.tolist(), graph.target.tolist())
-    assert g.length == graph.length_m.tolist() and g.weight == graph.weight.tolist()
-    assert g.speed == graph.speed.tolist() and g.flags == graph.flags.tolist()
+    assert g.lat.tolist()[:-1] == (graph.lat7 / SCALE).tolist()  # the reader includes the sentinel
+    assert g.lon.tolist()[:-1] == (graph.lon7 / SCALE).tolist()
+    assert g.first_edge.tolist() == graph.first_edge.tolist() and g.first_edge[-1] == g.edge_count
+    for column, expected in ((g.source, graph.source), (g.target, graph.target), (g.length, graph.length_m),
+                             (g.weight, graph.weight), (g.speed, graph.speed), (g.flags, graph.flags)):
+        assert column.tolist() == expected.tolist()
     for i, s in enumerate(graph.segment.tolist()):
         n = graph.seg_name[s]
         assert g.name(i) == (graph.names[n] if n >= 0 else "")

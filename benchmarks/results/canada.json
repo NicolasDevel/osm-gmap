@@ -1,0 +1,118 @@
+{
+  "name": "canada",
+  "label": "Canada",
+  "group": "country",
+  "extract": {
+    "file": "canada.osm.pbf",
+    "bytes": 6518626097,
+    "date": "2026-10-20"
+  },
+  "build": {
+    "seconds": 103.4388530254364,
+    "peak_rss": 6609993728,
+    "osm_ways": 2273056,
+    "osm_nodes": 18113378,
+    "segments": 3582546,
+    "shape_points": 15305114,
+    "shape_points_kept": 7174176,
+    "graph_seconds": 17.717849016189575,
+    "nodes": 2808264,
+    "edges": 6717238,
+    "ch_forward_arcs": 5432778,
+    "ch_backward_arcs": 5434706,
+    "sections": {
+      "header": 72,
+      "nodes": 33699180,
+      "edges": 188082664,
+      "grid": 274622292,
+      "geometry": 62921648,
+      "names": 4171662,
+      "ch_forward": 98157512,
+      "ch_backward": 98188360,
+      "total": 759843392,
+      "unique_names": 253221,
+      "grid_cells": 20564239
+    },
+    "load_seconds": 66.51318097114563,
+    "ch_seconds": 17.84800910949707,
+    "total_seconds": 103.33545184135437
+  },
+  "map": {
+    "nodes": 2808264,
+    "edges": 6717238,
+    "bounds": [
+      41.7344973,
+      -141.3332661,
+      82.5254024,
+      -52.6246996
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 35484,
+      "rows": 16317,
+      "non_empty": 20564239
+    },
+    "ch_arcs": {
+      "forward": 5432778,
+      "backward": 5434706
+    },
+    "directed_km": 2463276.423,
+    "sections": {
+      "header": 72,
+      "nodes": 33699180,
+      "edges": 188082664,
+      "grid": 274622292,
+      "geometry": 62921648,
+      "names": 4171664,
+      "ch_forward": 98157512,
+      "ch_backward": 98188360
+    },
+    "size": 759843392,
+    "edges_by_class": {
+      "motorway": 60142,
+      "trunk": 74753,
+      "primary": 255123,
+      "secondary": 499975,
+      "tertiary": 677500,
+      "unclassified": 1102038,
+      "residential": 2399127,
+      "service": 1648580
+    }
+  },
+  "routes": {
+    "routes": 175,
+    "unreachable": 25,
+    "route_km": {
+      "median": 1638.086,
+      "p95": 4611.472,
+      "max": 5570.583
+    },
+    "settled_nodes": {
+      "median": 526,
+      "p95": 806,
+      "max": 1150
+    },
+    "query_kb_read": {
+      "median": 5312.0,
+      "p95": 8352.0,
+      "max": 8796.0
+    },
+    "route_kb_read": {
+      "median": 8168.0,
+      "p95": 14640.0,
+      "max": 16848.0
+    },
+    "python_ms": {
+      "median": 1.7290830001002178,
+      "p95": 3.4054170000672457,
+      "max": 8.730333000130486
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 510408.6,
+    "page_size": 4096,
+    "reader_peak_rss": 1502265344
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

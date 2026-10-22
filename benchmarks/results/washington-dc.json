@@ -1,0 +1,118 @@
+{
+  "name": "washington-dc",
+  "label": "Washington DC",
+  "group": "city",
+  "extract": {
+    "file": "WashingtonDC.osm.pbf",
+    "bytes": 64963330,
+    "date": "2026-10-16"
+  },
+  "build": {
+    "seconds": 4.572464227676392,
+    "peak_rss": 1947992064,
+    "osm_ways": 98087,
+    "osm_nodes": 593128,
+    "segments": 175254,
+    "shape_points": 457485,
+    "shape_points_kept": 117700,
+    "graph_seconds": 0.47432613372802734,
+    "nodes": 135643,
+    "edges": 309260,
+    "ch_forward_arcs": 260928,
+    "ch_backward_arcs": 260960,
+    "sections": {
+      "header": 72,
+      "nodes": 1627728,
+      "edges": 8659280,
+      "grid": 1154608,
+      "geometry": 1153120,
+      "names": 223344,
+      "ch_forward": 4717428,
+      "ch_backward": 4717940,
+      "total": 22253520,
+      "unique_names": 13644,
+      "grid_cells": 17162
+    },
+    "load_seconds": 2.915983200073242,
+    "ch_seconds": 1.062795639038086,
+    "total_seconds": 4.485656023025513
+  },
+  "map": {
+    "nodes": 135643,
+    "edges": 309260,
+    "bounds": [
+      38.7555,
+      -77.252781,
+      39.0685495,
+      -76.810383
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 177,
+      "rows": 126,
+      "non_empty": 17162
+    },
+    "ch_arcs": {
+      "forward": 260928,
+      "backward": 260960
+    },
+    "directed_km": 23804.275,
+    "sections": {
+      "header": 72,
+      "nodes": 1627728,
+      "edges": 8659280,
+      "grid": 1154608,
+      "geometry": 1153120,
+      "names": 223344,
+      "ch_forward": 4717428,
+      "ch_backward": 4717940
+    },
+    "size": 22253520,
+    "edges_by_class": {
+      "motorway": 4504,
+      "trunk": 2896,
+      "primary": 18818,
+      "secondary": 20710,
+      "tertiary": 26541,
+      "unclassified": 4713,
+      "residential": 120297,
+      "service": 110781
+    }
+  },
+  "routes": {
+    "routes": 192,
+    "unreachable": 8,
+    "route_km": {
+      "median": 19.154,
+      "p95": 38.947,
+      "max": 48.637
+    },
+    "settled_nodes": {
+      "median": 255,
+      "p95": 402,
+      "max": 483
+    },
+    "query_kb_read": {
+      "median": 1116.0,
+      "p95": 1716.0,
+      "max": 2004.0
+    },
+    "route_kb_read": {
+      "median": 1336.0,
+      "p95": 2024.0,
+      "max": 2284.0
+    },
+    "python_ms": {
+      "median": 0.5200420000619488,
+      "p95": 1.01391699990927,
+      "max": 1.9630830001915456
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 44991.0,
+    "page_size": 4096,
+    "reader_peak_rss": 109985792
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

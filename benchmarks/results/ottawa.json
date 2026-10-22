@@ -1,0 +1,118 @@
+{
+  "name": "ottawa",
+  "label": "Ottawa",
+  "group": "city",
+  "extract": {
+    "file": "Ottawa.osm.pbf",
+    "bytes": 49485022,
+    "date": "2026-10-16"
+  },
+  "build": {
+    "seconds": 1.9936299324035645,
+    "peak_rss": 1924890624,
+    "osm_ways": 48927,
+    "osm_nodes": 280353,
+    "segments": 69415,
+    "shape_points": 227733,
+    "shape_points_kept": 59730,
+    "graph_seconds": 0.20288896560668945,
+    "nodes": 52620,
+    "edges": 120684,
+    "ch_forward_arcs": 101809,
+    "ch_backward_arcs": 101871,
+    "sections": {
+      "header": 72,
+      "nodes": 631452,
+      "edges": 3379152,
+      "grid": 688692,
+      "geometry": 570016,
+      "names": 159287,
+      "ch_forward": 1839432,
+      "ch_backward": 1840424,
+      "total": 9108528,
+      "unique_names": 10053,
+      "grid_cells": 22224
+    },
+    "load_seconds": 1.422846794128418,
+    "ch_seconds": 0.2707700729370117,
+    "total_seconds": 1.9122951030731201
+  },
+  "map": {
+    "nodes": 52620,
+    "edges": 120684,
+    "bounds": [
+      45.1921235,
+      -75.976847,
+      45.5700212,
+      -75.3517577
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 251,
+      "rows": 152,
+      "non_empty": 22224
+    },
+    "ch_arcs": {
+      "forward": 101809,
+      "backward": 101871
+    },
+    "directed_km": 13923.243,
+    "sections": {
+      "header": 72,
+      "nodes": 631452,
+      "edges": 3379152,
+      "grid": 688692,
+      "geometry": 570016,
+      "names": 159288,
+      "ch_forward": 1839432,
+      "ch_backward": 1840424
+    },
+    "size": 9108528,
+    "edges_by_class": {
+      "motorway": 1651,
+      "trunk": 490,
+      "primary": 5516,
+      "secondary": 13257,
+      "tertiary": 17792,
+      "unclassified": 4593,
+      "residential": 49645,
+      "service": 27740
+    }
+  },
+  "routes": {
+    "routes": 194,
+    "unreachable": 6,
+    "route_km": {
+      "median": 19.394,
+      "p95": 40.322,
+      "max": 48.433
+    },
+    "settled_nodes": {
+      "median": 145,
+      "p95": 211,
+      "max": 259
+    },
+    "query_kb_read": {
+      "median": 620.0,
+      "p95": 860.0,
+      "max": 976.0
+    },
+    "route_kb_read": {
+      "median": 804.0,
+      "p95": 1164.0,
+      "max": 1332.0
+    },
+    "python_ms": {
+      "median": 0.2557500001785229,
+      "p95": 0.3859590005959035,
+      "max": 0.7315000002563465
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 13896.2,
+    "page_size": 4096,
+    "reader_peak_rss": 58458112
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

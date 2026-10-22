@@ -1,0 +1,117 @@
+{
+  "name": "bogota",
+  "label": "Bogot\u00e1",
+  "group": "city",
+  "extract": {
+    "file": "Bogota.osm.pbf",
+    "bytes": 21198407,
+    "date": "2026-10-16"
+  },
+  "build": {
+    "seconds": 2.3854970932006836,
+    "peak_rss": 1853308928,
+    "osm_ways": 64774,
+    "osm_nodes": 247709,
+    "segments": 120597,
+    "shape_points": 158716,
+    "shape_points_kept": 33966,
+    "graph_seconds": 0.21144914627075195,
+    "nodes": 88993,
+    "edges": 204578,
+    "ch_forward_arcs": 202079,
+    "ch_backward_arcs": 201863,
+    "sections": {
+      "header": 72,
+      "nodes": 1067928,
+      "edges": 5728184,
+      "grid": 710164,
+      "geometry": 335560,
+      "names": 87755,
+      "ch_forward": 3589244,
+      "ch_backward": 3585788,
+      "total": 15104696,
+      "unique_names": 5894,
+      "grid_cells": 7189
+    },
+    "load_seconds": 1.2848987579345703,
+    "ch_seconds": 0.7835969924926758,
+    "total_seconds": 2.299785852432251
+  },
+  "map": {
+    "nodes": 88993,
+    "edges": 204578,
+    "bounds": [
+      4.4976602,
+      -74.244021,
+      4.8006677,
+      -73.9893267
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 102,
+      "rows": 122,
+      "non_empty": 7189
+    },
+    "ch_arcs": {
+      "forward": 202079,
+      "backward": 201863
+    },
+    "directed_km": 13436.255,
+    "sections": {
+      "header": 72,
+      "nodes": 1067928,
+      "edges": 5728184,
+      "grid": 710164,
+      "geometry": 335560,
+      "names": 87756,
+      "ch_forward": 3589244,
+      "ch_backward": 3585788
+    },
+    "size": 15104696,
+    "edges_by_class": {
+      "trunk": 3136,
+      "primary": 6565,
+      "secondary": 9268,
+      "tertiary": 26041,
+      "unclassified": 2483,
+      "residential": 130641,
+      "service": 26444
+    }
+  },
+  "routes": {
+    "routes": 198,
+    "unreachable": 2,
+    "route_km": {
+      "median": 14.226,
+      "p95": 29.344,
+      "max": 33.745
+    },
+    "settled_nodes": {
+      "median": 236,
+      "p95": 338,
+      "max": 380
+    },
+    "query_kb_read": {
+      "median": 972.0,
+      "p95": 1384.0,
+      "max": 1588.0
+    },
+    "route_kb_read": {
+      "median": 1144.0,
+      "p95": 1732.0,
+      "max": 1944.0
+    },
+    "python_ms": {
+      "median": 0.4003750000265427,
+      "p95": 0.5599160003839643,
+      "max": 0.661666999803856
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 31010.6,
+    "page_size": 4096,
+    "reader_peak_rss": 79380480
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

@@ -1,0 +1,207 @@
+{
+  "region": "colombia",
+  "label": "Colombia",
+  "admin_level": 4,
+  "areas": [
+    {
+      "name": "Antioquia",
+      "nodes": 139825,
+      "edges": 309209,
+      "estimated_mb": 31.81902607519606
+    },
+    {
+      "name": "Cundinamarca",
+      "nodes": 119641,
+      "edges": 268498,
+      "estimated_mb": 27.225890210352453
+    },
+    {
+      "name": "Valle del Cauca",
+      "nodes": 108530,
+      "edges": 254606,
+      "estimated_mb": 24.697435365213863
+    },
+    {
+      "name": "Bogotá, Distrito Capital",
+      "nodes": 88881,
+      "edges": 204814,
+      "estimated_mb": 20.22604581862686
+    },
+    {
+      "name": "Santander",
+      "nodes": 66332,
+      "edges": 152511,
+      "estimated_mb": 15.09472295812555
+    },
+    {
+      "name": "Bolívar",
+      "nodes": 56167,
+      "edges": 145362,
+      "estimated_mb": 12.781542911250042
+    },
+    {
+      "name": "Boyacá",
+      "nodes": 55463,
+      "edges": 131416,
+      "estimated_mb": 12.621338410217051
+    },
+    {
+      "name": "Tolima",
+      "nodes": 49888,
+      "edges": 117970,
+      "estimated_mb": 11.35267350501971
+    },
+    {
+      "name": "Atlántico",
+      "nodes": 49553,
+      "edges": 132116,
+      "estimated_mb": 11.276439829102024
+    },
+    {
+      "name": "Norte de Santander",
+      "nodes": 48736,
+      "edges": 118029,
+      "estimated_mb": 11.090520685147544
+    },
+    {
+      "name": "Meta",
+      "nodes": 45577,
+      "edges": 112598,
+      "estimated_mb": 10.371648499404333
+    },
+    {
+      "name": "Cauca",
+      "nodes": 43913,
+      "edges": 102614,
+      "estimated_mb": 9.992983315144535
+    },
+    {
+      "name": "Córdoba",
+      "nodes": 42994,
+      "edges": 113804,
+      "estimated_mb": 9.783852723597208
+    },
+    {
+      "name": "Huila",
+      "nodes": 41786,
+      "edges": 104492,
+      "estimated_mb": 9.508956363870142
+    },
+    {
+      "name": "Magdalena",
+      "nodes": 37254,
+      "edges": 102649,
+      "estimated_mb": 8.47763988847026
+    },
+    {
+      "name": "Cesar",
+      "nodes": 34069,
+      "edges": 95502,
+      "estimated_mb": 7.752851059222991
+    },
+    {
+      "name": "Nariño",
+      "nodes": 32219,
+      "edges": 75844,
+      "estimated_mb": 7.331859117587999
+    },
+    {
+      "name": "Caldas",
+      "nodes": 27158,
+      "edges": 62479,
+      "estimated_mb": 6.180161703201678
+    },
+    {
+      "name": "La Guajira",
+      "nodes": 25820,
+      "edges": 72245,
+      "estimated_mb": 5.875682125954317
+    },
+    {
+      "name": "Sucre",
+      "nodes": 25807,
+      "edges": 69134,
+      "estimated_mb": 5.872723804202287
+    },
+    {
+      "name": "Risaralda",
+      "nodes": 24637,
+      "edges": 53422,
+      "estimated_mb": 5.606474846519617
+    },
+    {
+      "name": "Casanare",
+      "nodes": 20881,
+      "edges": 54594,
+      "estimated_mb": 4.751747423394736
+    },
+    {
+      "name": "Quindío",
+      "nodes": 16650,
+      "edges": 35820,
+      "estimated_mb": 3.7889274747149253
+    },
+    {
+      "name": "Caquetá",
+      "nodes": 13030,
+      "edges": 33250,
+      "estimated_mb": 2.965148648380509
+    },
+    {
+      "name": "Arauca",
+      "nodes": 11059,
+      "edges": 29410,
+      "estimated_mb": 2.516621558130472
+    },
+    {
+      "name": "Putumayo",
+      "nodes": 9694,
+      "edges": 23950,
+      "estimated_mb": 2.2059977741673564
+    },
+    {
+      "name": "Chocó",
+      "nodes": 7405,
+      "edges": 17545,
+      "estimated_mb": 1.6851055825984396
+    },
+    {
+      "name": "Guaviare",
+      "nodes": 3523,
+      "edges": 9097,
+      "estimated_mb": 0.8017051948000409
+    },
+    {
+      "name": "Vichada",
+      "nodes": 2095,
+      "edges": 5713,
+      "estimated_mb": 0.47674492850016625
+    },
+    {
+      "name": "Archipiélago de San Andrés, Providencia y Santa Catalina",
+      "nodes": 1319,
+      "edges": 2936,
+      "estimated_mb": 0.3001558762251643
+    },
+    {
+      "name": "Amazonas",
+      "nodes": 954,
+      "edges": 2252,
+      "estimated_mb": 0.21709530395663895
+    },
+    {
+      "name": "Guainía",
+      "nodes": 862,
+      "edges": 2245,
+      "estimated_mb": 0.19615948848073667
+    },
+    {
+      "name": "Vaupés",
+      "nodes": 333,
+      "edges": 805,
+      "estimated_mb": 0.0757785494942985
+    }
+  ],
+  "nodes_outside": 7878,
+  "bytes_per_node": 227.5632116945901
+}

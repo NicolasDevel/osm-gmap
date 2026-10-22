@@ -79,7 +79,6 @@ def test_southern_and_western_coordinates_parse(tmp_path):
 
 
 @pytest.mark.parametrize("argv", [
-    ["build", "x.pbf", "-o", "x.gmap"],                                  # no area
     ["build", "x.pbf", "-o", "x.gmap", "--bbox", "1,2,3"],               # bad bbox
     ["build", "x.pbf", "-o", "x.gmap", "--bbox", "5,0,4,1"],             # min > max
     ["build", "x.pbf", "-o", "x.gmap", "--region", "bogota", "--bbox", "0,0,1,1"],
@@ -89,6 +88,23 @@ def test_bad_arguments(argv):
     with pytest.raises(SystemExit) as exc:
         main(argv)
     assert exc.value.code == 2
+
+
+def test_build_whole_extract_by_default(town, tmp_path):
+    from roadpack.format import Gmap
+    main(["build", str(town.osm), "-o", str(tmp_path / "all.gmap"), "--no-chunks"])
+    g = Gmap(tmp_path / "all.gmap")
+    assert "Far away" in {g.name(e) for e in range(g.edge_count)}  # outside TOWN_BBOX, inside the file
+
+
+def test_stats(built, capsys):
+    main(["stats", str(built), "--routes", "30", "--check", "10", "--json"])
+    r = json.loads(capsys.readouterr().out)
+    assert r["routes"] + r["unreachable"] <= 30 and r["routes"] > 0
+    assert r["astar_checked"] == 10 and r["astar_mismatches"] == 0
+    assert 0 < r["query_kb_read"]["median"] <= r["route_kb_read"]["median"]
+    main(["stats", str(built), "--routes", "10"])
+    assert "nodes settled" in capsys.readouterr().out
 
 
 def test_version(capsys):

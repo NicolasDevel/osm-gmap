@@ -6,7 +6,7 @@ import heapq
 import math
 
 from ..format.reader import Gmap
-from ..format.spec import CH_ORIGINAL
+from ..format.spec import CH_ARC, CH_ORIGINAL
 from ..geo import local_xy
 
 MAX_SPEED_KMH = 120  # for the A* heuristic: never overestimates the remaining time
@@ -49,12 +49,14 @@ def route_astar(gmap: Gmap, start: int, goal: int, stats=None):
     return None, math.inf
 
 
-def _unpack(gmap, side, arc, out):
+def _unpack(gmap, side, arc, out, reads=None):
     """Expand a hierarchy arc into its original edges, in order. Shortcut = backward(a) + forward(b)."""
     stack = [(side, arc)]
     while stack:
         sd, a = stack.pop()
         ch = gmap.ch_fwd if sd == "f" else gmap.ch_bwd
+        if reads is not None:
+            reads.append((ch.arcs_off + a * CH_ARC.size, CH_ARC.size))
         if ch.a[a] & CH_ORIGINAL:
             out.append(ch.a[a] & ~CH_ORIGINAL)
         else:
@@ -62,9 +64,10 @@ def _unpack(gmap, side, arc, out):
             stack.append(("b", ch.a[a]))
 
 
-def route_ch(gmap: Gmap, start: int, goal: int, stats=None):
+def route_ch(gmap: Gmap, start: int, goal: int, stats=None, reads=None):
     """Fastest route with the contraction hierarchy: bidirectional Dijkstra going only upwards.
-    Returns (edges, cost in tenths of a second); ([], 0) if start == goal, (None, inf) if unreachable."""
+    Returns (edges, cost in tenths of a second); ([], 0) if start == goal, (None, inf) if unreachable.
+    If `reads` is a list, the (file offset, size) of every hierarchy record the query touches is appended."""
     dist = ({start: 0}, {goal: 0})
     pred = ({}, {})  # node -> arc it was reached through
     heaps = ([(0, start)], [(0, goal)])
@@ -84,6 +87,9 @@ def route_ch(gmap: Gmap, start: int, goal: int, stats=None):
         if u in dist[1 - k] and d + dist[1 - k][u] < best:
             best, meet = d + dist[1 - k][u], u
         ch = sides[k]
+        if reads is not None:
+            reads.append((ch.first_off + u * 4, 8))
+            reads.append((ch.arcs_off + ch.first[u] * CH_ARC.size, (ch.first[u + 1] - ch.first[u]) * CH_ARC.size))
         for a in range(ch.first[u], ch.first[u + 1]):
             v, nd = ch.other[a], d + ch.weight[a]
             if nd < dist[k].get(v, math.inf):
@@ -104,11 +110,11 @@ def route_ch(gmap: Gmap, start: int, goal: int, stats=None):
         n = bisect.bisect_right(gmap.ch_fwd.first, a) - 1  # node that stores the forward arc (its tail)
     path = []
     for a in reversed(up):
-        _unpack(gmap, "f", a, path)
+        _unpack(gmap, "f", a, path, reads)
     n = meet
     while n != goal:
         a = pred[1][n]
-        _unpack(gmap, "b", a, path)
+        _unpack(gmap, "b", a, path, reads)
         n = bisect.bisect_right(gmap.ch_bwd.first, a) - 1  # node that stores the backward arc (its head)
     return path, best
 

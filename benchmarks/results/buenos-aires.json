@@ -1,0 +1,118 @@
+{
+  "name": "buenos-aires",
+  "label": "Buenos Aires",
+  "group": "city",
+  "extract": {
+    "file": "BuenosAires.osm.pbf",
+    "bytes": 38596062,
+    "date": "2026-10-16"
+  },
+  "build": {
+    "seconds": 8.86355996131897,
+    "peak_rss": 1898151936,
+    "osm_ways": 128310,
+    "osm_nodes": 446899,
+    "segments": 336240,
+    "shape_points": 235689,
+    "shape_points_kept": 61276,
+    "graph_seconds": 0.45447325706481934,
+    "nodes": 211210,
+    "edges": 565506,
+    "ch_forward_arcs": 668534,
+    "ch_backward_arcs": 668659,
+    "sections": {
+      "header": 72,
+      "nodes": 2534532,
+      "edges": 15834168,
+      "grid": 2474408,
+      "geometry": 628332,
+      "names": 209462,
+      "ch_forward": 11541392,
+      "ch_backward": 11543392,
+      "total": 44765760,
+      "unique_names": 12755,
+      "grid_cells": 37320
+    },
+    "load_seconds": 2.2895359992980957,
+    "ch_seconds": 5.987713098526001,
+    "total_seconds": 8.781994104385376
+  },
+  "map": {
+    "nodes": 211210,
+    "edges": 565506,
+    "bounds": [
+      -34.8748054,
+      -58.9326737,
+      -34.3858634,
+      -58.1008172
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 333,
+      "rows": 196,
+      "non_empty": 37320
+    },
+    "ch_arcs": {
+      "forward": 668534,
+      "backward": 668659
+    },
+    "directed_km": 54464.583,
+    "sections": {
+      "header": 72,
+      "nodes": 2534532,
+      "edges": 15834168,
+      "grid": 2474408,
+      "geometry": 628332,
+      "names": 209464,
+      "ch_forward": 11541392,
+      "ch_backward": 11543392
+    },
+    "size": 44765760,
+    "edges_by_class": {
+      "motorway": 3769,
+      "trunk": 667,
+      "primary": 12154,
+      "secondary": 30151,
+      "tertiary": 45601,
+      "unclassified": 5550,
+      "residential": 417452,
+      "service": 50162
+    }
+  },
+  "routes": {
+    "routes": 194,
+    "unreachable": 6,
+    "route_km": {
+      "median": 33.261,
+      "p95": 65.425,
+      "max": 84.931
+    },
+    "settled_nodes": {
+      "median": 604,
+      "p95": 861,
+      "max": 952
+    },
+    "query_kb_read": {
+      "median": 2324.0,
+      "p95": 3396.0,
+      "max": 3736.0
+    },
+    "route_kb_read": {
+      "median": 2588.0,
+      "p95": 3812.0,
+      "max": 4240.0
+    },
+    "python_ms": {
+      "median": 1.1404580000089481,
+      "p95": 1.7064170006051427,
+      "max": 2.314708000085375
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 61456.2,
+    "page_size": 4096,
+    "reader_peak_rss": 152272896
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

@@ -35,6 +35,7 @@ def _print_sections(sections, total):
 
 
 COORDINATE_OPTIONS = ("--bbox", "--from", "--to")
+WHOLE_WORLD = (-90.0, -180.0, 90.0, 180.0)
 
 
 def _join_coordinate_values(argv):
@@ -55,7 +56,7 @@ def cmd_build(args):
     from .pipeline import build
     from .regions import REGIONS
 
-    bbox = args.bbox or REGIONS[args.region]
+    bbox = args.bbox or (REGIONS[args.region] if args.region else WHOLE_WORLD)
     chunk_dir = None if args.no_chunks else (args.chunk_dir or args.output.with_suffix(""))
     stats = build(args.pbf, bbox, PROFILES[args.profile], args.output, chunk_dir)
 
@@ -103,6 +104,34 @@ def cmd_info(args):
     print("  edges by road class:")
     for c, n in sorted(classes.items()):
         print(f"    {ROAD_CLASSES[c]:<12} {n:>10,}  {n / g.edge_count:6.1%}")
+
+
+def cmd_stats(args):
+    from .format import Gmap
+    from .stats import sample_routes
+
+    g = Gmap(args.gmap)
+    r = sample_routes(g, args.routes, args.seed, args.check)
+    if args.json:
+        print(json.dumps(r, indent=2))
+        return
+    print(f"{args.gmap}: {g.node_count:,} nodes, {_mb(len(g.data))}")
+    print(f"  {r['routes']} random routes ({r['unreachable']} pairs without a route)")
+    rows = [("route length (km)", "route_km", "{:,.1f}"), ("nodes settled", "settled_nodes", "{:,}"),
+            ("KB read by the query", "query_kb_read", "{:,.0f}"), ("KB read incl. geometry", "route_kb_read", "{:,.0f}"),
+            ("Python time (ms)", "python_ms", "{:,.1f}")]
+    print(f"    {'':<24}{'median':>10}{'p95':>10}{'max':>10}")
+    for label, key, fmt in rows:
+        v = r[key]
+        cells = "".join(f"{fmt.format(v[q]):>10}" if v[q] is not None else f"{'-':>10}" for q in ("median", "p95", "max"))
+        print(f"    {label:<24}{cells}")
+    print(f"  pages of {r['page_size']} bytes; what a device reads with an empty cache")
+    if r["astar_checked"]:
+        verdict = "all the same cost" if not r["astar_mismatches"] else f"{r['astar_mismatches']} MISMATCHES"
+        print(f"  A* on the full graph: {r['astar_checked']} routes, {verdict}, "
+              f"{r['astar_settled_mean']:,.0f} nodes settled on average")
+    if r["astar_mismatches"]:
+        sys.exit(1)
 
 
 def cmd_route(args):
@@ -159,9 +188,9 @@ def main(argv=None):
                        description="Build a .gmap from an OpenStreetMap extract (.osm.pbf), e.g. from Geofabrik.")
     b.add_argument("pbf", type=Path, help="OpenStreetMap extract (.osm.pbf)")
     b.add_argument("-o", "--output", required=True, type=Path, help="output .gmap file")
-    area = b.add_mutually_exclusive_group(required=True)
+    area = b.add_mutually_exclusive_group()
     area.add_argument("--bbox", type=_bbox, metavar="MINLAT,MINLON,MAXLAT,MAXLON",
-                      help="keep the roads that touch this rectangle")
+                      help="keep the roads that touch this rectangle (default: the whole extract)")
     area.add_argument("--region", choices=sorted(REGIONS), help="predefined bounding box")
     b.add_argument("--profile", choices=sorted(PROFILES), default="motorcycle",
                    help="vehicle whose access and oneway rules apply (default: motorcycle)")
@@ -174,6 +203,16 @@ def main(argv=None):
     i.add_argument("gmap", type=Path, help=".gmap file or directory of SD card chunks")
     i.add_argument("--json", action="store_true", help="machine-readable output")
     i.set_defaults(func=cmd_info)
+
+    st = sub.add_parser("stats", help="cost of random routes: nodes settled and KB read",
+                        description="Route between random pairs of nodes like a device would and report how many "
+                                    "nodes the contraction hierarchy settles and how much of the file it reads.")
+    st.add_argument("gmap", type=Path, help=".gmap file or directory of SD card chunks")
+    st.add_argument("--routes", type=int, default=100, help="random node pairs (default: 100)")
+    st.add_argument("--seed", type=int, default=1)
+    st.add_argument("--check", type=int, default=0, metavar="N", help="also run A* on the first N routes")
+    st.add_argument("--json", action="store_true", help="machine-readable output")
+    st.set_defaults(func=cmd_stats)
 
     r = sub.add_parser("route", help="route between two points and print the maneuvers",
                        description="Route with the contraction hierarchy, like a device would.")

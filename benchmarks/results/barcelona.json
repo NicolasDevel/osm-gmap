@@ -1,0 +1,118 @@
+{
+  "name": "barcelona",
+  "label": "Barcelona",
+  "group": "city",
+  "extract": {
+    "file": "Barcelona.osm.pbf",
+    "bytes": 72916045,
+    "date": "2026-10-16"
+  },
+  "build": {
+    "seconds": 3.648689031600952,
+    "peak_rss": 1945321472,
+    "osm_ways": 93014,
+    "osm_nodes": 537561,
+    "segments": 138373,
+    "shape_points": 436187,
+    "shape_points_kept": 112402,
+    "graph_seconds": 0.3872640132904053,
+    "nodes": 101374,
+    "edges": 188992,
+    "ch_forward_arcs": 193509,
+    "ch_backward_arcs": 193824,
+    "sections": {
+      "header": 72,
+      "nodes": 1216500,
+      "edges": 5291776,
+      "grid": 1009884,
+      "geometry": 1066836,
+      "names": 342848,
+      "ch_forward": 3501648,
+      "ch_backward": 3506688,
+      "total": 15936252,
+      "unique_names": 15072,
+      "grid_cells": 18693
+    },
+    "load_seconds": 2.362873077392578,
+    "ch_seconds": 0.7930407524108887,
+    "total_seconds": 3.5694570541381836
+  },
+  "map": {
+    "nodes": 101374,
+    "edges": 188992,
+    "bounds": [
+      41.2304959,
+      1.7604692,
+      41.6284214,
+      2.4842244
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 290,
+      "rows": 160,
+      "non_empty": 18693
+    },
+    "ch_arcs": {
+      "forward": 193509,
+      "backward": 193824
+    },
+    "directed_km": 17020.025,
+    "sections": {
+      "header": 72,
+      "nodes": 1216500,
+      "edges": 5291776,
+      "grid": 1009884,
+      "geometry": 1066836,
+      "names": 342848,
+      "ch_forward": 3501648,
+      "ch_backward": 3506688
+    },
+    "size": 15936252,
+    "edges_by_class": {
+      "motorway": 4100,
+      "trunk": 2826,
+      "primary": 5038,
+      "secondary": 11418,
+      "tertiary": 23505,
+      "unclassified": 6112,
+      "residential": 107786,
+      "service": 28207
+    }
+  },
+  "routes": {
+    "routes": 190,
+    "unreachable": 10,
+    "route_km": {
+      "median": 27.465,
+      "p95": 50.468,
+      "max": 71.295
+    },
+    "settled_nodes": {
+      "median": 194,
+      "p95": 268,
+      "max": 322
+    },
+    "query_kb_read": {
+      "median": 824.0,
+      "p95": 1208.0,
+      "max": 1380.0
+    },
+    "route_kb_read": {
+      "median": 1044.0,
+      "p95": 1708.0,
+      "max": 1832.0
+    },
+    "python_ms": {
+      "median": 0.3392079997865949,
+      "p95": 0.4805839998880401,
+      "max": 0.6155830005809548
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 35980.6,
+    "page_size": 4096,
+    "reader_peak_rss": 81674240
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

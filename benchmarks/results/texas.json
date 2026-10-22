@@ -1,0 +1,118 @@
+{
+  "name": "texas",
+  "label": "Texas",
+  "group": "US state",
+  "extract": {
+    "file": "texas.osm.pbf",
+    "bytes": 725605296,
+    "date": "2026-10-20"
+  },
+  "build": {
+    "seconds": 95.67716717720032,
+    "peak_rss": 6086672384,
+    "osm_ways": 2234772,
+    "osm_nodes": 15820817,
+    "segments": 4801530,
+    "shape_points": 12183613,
+    "shape_points_kept": 5527195,
+    "graph_seconds": 15.458785057067871,
+    "nodes": 3637204,
+    "edges": 8901683,
+    "ch_forward_arcs": 7280303,
+    "ch_backward_arcs": 7282163,
+    "sections": {
+      "header": 72,
+      "nodes": 43646460,
+      "edges": 249247124,
+      "grid": 87616556,
+      "geometry": 50821192,
+      "names": 4602413,
+      "ch_forward": 131033672,
+      "ch_backward": 131063432,
+      "total": 698030924,
+      "unique_names": 286232,
+      "grid_cells": 4807736
+    },
+    "load_seconds": 52.479734897613525,
+    "ch_seconds": 26.303107023239136,
+    "total_seconds": 95.56622195243835
+  },
+  "map": {
+    "nodes": 3637204,
+    "edges": 8901683,
+    "bounds": [
+      25.7107946,
+      -106.6844748,
+      36.6888867,
+      -93.390923
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 5318,
+      "rows": 4392,
+      "non_empty": 4807736
+    },
+    "ch_arcs": {
+      "forward": 7280303,
+      "backward": 7282163
+    },
+    "directed_km": 1755778.771,
+    "sections": {
+      "header": 72,
+      "nodes": 43646460,
+      "edges": 249247124,
+      "grid": 87616556,
+      "geometry": 50821192,
+      "names": 4602416,
+      "ch_forward": 131033672,
+      "ch_backward": 131063432
+    },
+    "size": 698030924,
+    "edges_by_class": {
+      "motorway": 64605,
+      "trunk": 101065,
+      "primary": 252430,
+      "secondary": 621711,
+      "tertiary": 640658,
+      "unclassified": 218096,
+      "residential": 3760777,
+      "service": 3242341
+    }
+  },
+  "routes": {
+    "routes": 194,
+    "unreachable": 6,
+    "route_km": {
+      "median": 438.213,
+      "p95": 992.077,
+      "max": 1359.576
+    },
+    "settled_nodes": {
+      "median": 707,
+      "p95": 1151,
+      "max": 1411
+    },
+    "query_kb_read": {
+      "median": 5672.0,
+      "p95": 8556.0,
+      "max": 9688.0
+    },
+    "route_kb_read": {
+      "median": 7524.0,
+      "p95": 12044.0,
+      "max": 14160.0
+    },
+    "python_ms": {
+      "median": 1.5696669997851131,
+      "p95": 2.262416999656125,
+      "max": 3.930374999981723
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 445549.4,
+    "page_size": 4096,
+    "reader_peak_rss": 1527496704
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

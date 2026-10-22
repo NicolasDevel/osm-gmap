@@ -1,0 +1,118 @@
+{
+  "name": "tokyo",
+  "label": "Tokyo",
+  "group": "city",
+  "extract": {
+    "file": "Tokyo.osm.pbf",
+    "bytes": 92018749,
+    "date": "2026-10-16"
+  },
+  "build": {
+    "seconds": 7.126479864120483,
+    "peak_rss": 1929216000,
+    "osm_ways": 144308,
+    "osm_nodes": 583568,
+    "segments": 328481,
+    "shape_points": 348376,
+    "shape_points_kept": 81189,
+    "graph_seconds": 0.5884387493133545,
+    "nodes": 235192,
+    "edges": 577068,
+    "ch_forward_arcs": 586418,
+    "ch_backward_arcs": 587045,
+    "sections": {
+      "header": 72,
+      "nodes": 2822316,
+      "edges": 16157904,
+      "grid": 1775072,
+      "geometry": 858408,
+      "names": 45443,
+      "ch_forward": 10323464,
+      "ch_backward": 10333496,
+      "total": 42316176,
+      "unique_names": 2521,
+      "grid_cells": 11069
+    },
+    "load_seconds": 2.778607130050659,
+    "ch_seconds": 3.6169517040252686,
+    "total_seconds": 7.0191919803619385
+  },
+  "map": {
+    "nodes": 235192,
+    "edges": 577068,
+    "bounds": [
+      35.5469186,
+      139.6078751,
+      35.8202825,
+      139.958846
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 141,
+      "rows": 110,
+      "non_empty": 11069
+    },
+    "ch_arcs": {
+      "forward": 586418,
+      "backward": 587045
+    },
+    "directed_km": 28940.073,
+    "sections": {
+      "header": 72,
+      "nodes": 2822316,
+      "edges": 16157904,
+      "grid": 1775072,
+      "geometry": 858408,
+      "names": 45444,
+      "ch_forward": 10323464,
+      "ch_backward": 10333496
+    },
+    "size": 42316176,
+    "edges_by_class": {
+      "motorway": 1862,
+      "trunk": 6560,
+      "primary": 16351,
+      "secondary": 16286,
+      "tertiary": 66283,
+      "unclassified": 97134,
+      "residential": 205419,
+      "service": 167173
+    }
+  },
+  "routes": {
+    "routes": 198,
+    "unreachable": 2,
+    "route_km": {
+      "median": 17.225,
+      "p95": 31.762,
+      "max": 36.997
+    },
+    "settled_nodes": {
+      "median": 438,
+      "p95": 598,
+      "max": 684
+    },
+    "query_kb_read": {
+      "median": 1936.0,
+      "p95": 2640.0,
+      "max": 3000.0
+    },
+    "route_kb_read": {
+      "median": 2188.0,
+      "p95": 3048.0,
+      "max": 3376.0
+    },
+    "python_ms": {
+      "median": 0.7741670005998458,
+      "p95": 1.089000000320084,
+      "max": 1.7263330000787391
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 82162.0,
+    "page_size": 4096,
+    "reader_peak_rss": 152764416
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

@@ -1,0 +1,117 @@
+{
+  "name": "colombia",
+  "label": "Colombia",
+  "group": "country",
+  "extract": {
+    "file": "colombia.osm.pbf",
+    "bytes": 314087098,
+    "date": "2026-05-09"
+  },
+  "build": {
+    "seconds": 51.61361002922058,
+    "peak_rss": 3038478336,
+    "osm_ways": 774165,
+    "osm_nodes": 9655142,
+    "segments": 1632797,
+    "shape_points": 8395209,
+    "shape_points_kept": 5127058,
+    "graph_seconds": 9.7310950756073,
+    "nodes": 1259933,
+    "edges": 3036366,
+    "ch_forward_arcs": 2735121,
+    "ch_backward_arcs": 2735806,
+    "sections": {
+      "header": 72,
+      "nodes": 15119208,
+      "edges": 85018248,
+      "grid": 45541340,
+      "geometry": 43068176,
+      "names": 353043,
+      "ch_forward": 48801676,
+      "ch_backward": 48812636,
+      "total": 286714400,
+      "unique_names": 21397,
+      "grid_cells": 2940227
+    },
+    "load_seconds": 29.224075078964233,
+    "ch_seconds": 12.148068189620972,
+    "total_seconds": 51.503122091293335
+  },
+  "map": {
+    "nodes": 1259933,
+    "edges": 3036366,
+    "bounds": [
+      -4.2586935,
+      -81.7353937,
+      13.3853455,
+      -66.9520576
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 5914,
+      "rows": 7058,
+      "non_empty": 2940227
+    },
+    "ch_arcs": {
+      "forward": 2735121,
+      "backward": 2735806
+    },
+    "directed_km": 655970.353,
+    "sections": {
+      "header": 72,
+      "nodes": 15119208,
+      "edges": 85018248,
+      "grid": 45541340,
+      "geometry": 43068176,
+      "names": 353044,
+      "ch_forward": 48801676,
+      "ch_backward": 48812636
+    },
+    "size": 286714400,
+    "edges_by_class": {
+      "trunk": 61808,
+      "primary": 62108,
+      "secondary": 99301,
+      "tertiary": 196378,
+      "unclassified": 454974,
+      "residential": 1834627,
+      "service": 327170
+    }
+  },
+  "routes": {
+    "routes": 192,
+    "unreachable": 8,
+    "route_km": {
+      "median": 617.306,
+      "p95": 1234.212,
+      "max": 1692.634
+    },
+    "settled_nodes": {
+      "median": 275,
+      "p95": 435,
+      "max": 555
+    },
+    "query_kb_read": {
+      "median": 2980.0,
+      "p95": 4472.0,
+      "max": 5708.0
+    },
+    "route_kb_read": {
+      "median": 4988.0,
+      "p95": 7972.0,
+      "max": 9776.0
+    },
+    "python_ms": {
+      "median": 1.3681250002264278,
+      "p95": 2.1830830000908463,
+      "max": 2.5973329993576044
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 457588.0,
+    "page_size": 4096,
+    "reader_peak_rss": 762298368
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

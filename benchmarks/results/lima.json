@@ -1,0 +1,118 @@
+{
+  "name": "lima",
+  "label": "Lima",
+  "group": "city",
+  "extract": {
+    "file": "Lima.osm.pbf",
+    "bytes": 30315616,
+    "date": "2026-10-16"
+  },
+  "build": {
+    "seconds": 5.392337083816528,
+    "peak_rss": 1920811008,
+    "osm_ways": 120877,
+    "osm_nodes": 608003,
+    "segments": 282481,
+    "shape_points": 406849,
+    "shape_points_kept": 137926,
+    "graph_seconds": 0.6087589263916016,
+    "nodes": 201154,
+    "edges": 494920,
+    "ch_forward_arcs": 486947,
+    "ch_backward_arcs": 486995,
+    "sections": {
+      "header": 72,
+      "nodes": 2413860,
+      "edges": 13857760,
+      "grid": 1927772,
+      "geometry": 1293764,
+      "names": 272918,
+      "ch_forward": 8595776,
+      "ch_backward": 8596544,
+      "total": 36958468,
+      "unique_names": 14813,
+      "grid_cells": 35894
+    },
+    "load_seconds": 2.537482976913452,
+    "ch_seconds": 2.120310068130493,
+    "total_seconds": 5.307460069656372
+  },
+  "map": {
+    "nodes": 201154,
+    "edges": 494920,
+    "bounds": [
+      -12.495797,
+      -77.2435028,
+      -11.6035348,
+      -76.4840933
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 304,
+      "rows": 357,
+      "non_empty": 35894
+    },
+    "ch_arcs": {
+      "forward": 486947,
+      "backward": 486995
+    },
+    "directed_km": 38043.613,
+    "sections": {
+      "header": 72,
+      "nodes": 2413860,
+      "edges": 13857760,
+      "grid": 1927772,
+      "geometry": 1293764,
+      "names": 272920,
+      "ch_forward": 8595776,
+      "ch_backward": 8596544
+    },
+    "size": 36958468,
+    "edges_by_class": {
+      "motorway": 1574,
+      "trunk": 2993,
+      "primary": 12505,
+      "secondary": 22419,
+      "tertiary": 39332,
+      "unclassified": 5353,
+      "residential": 358632,
+      "service": 52112
+    }
+  },
+  "routes": {
+    "routes": 195,
+    "unreachable": 5,
+    "route_km": {
+      "median": 28.051,
+      "p95": 60.281,
+      "max": 95.366
+    },
+    "settled_nodes": {
+      "median": 304,
+      "p95": 408,
+      "max": 503
+    },
+    "query_kb_read": {
+      "median": 1480.0,
+      "p95": 1952.0,
+      "max": 2172.0
+    },
+    "route_kb_read": {
+      "median": 1820.0,
+      "p95": 2576.0,
+      "max": 2816.0
+    },
+    "python_ms": {
+      "median": 0.5613749999611173,
+      "p95": 0.7646670001122402,
+      "max": 1.0268750002069282
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 71961.4,
+    "page_size": 4096,
+    "reader_peak_rss": 138657792
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

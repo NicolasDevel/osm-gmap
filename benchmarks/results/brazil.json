@@ -1,0 +1,118 @@
+{
+  "name": "brazil",
+  "label": "Brazil",
+  "group": "country",
+  "extract": {
+    "file": "brazil.osm.pbf",
+    "bytes": 2096862892,
+    "date": "2026-10-20"
+  },
+  "build": {
+    "seconds": 457.1315951347351,
+    "peak_rss": 8627879936,
+    "osm_ways": 6135527,
+    "osm_nodes": 78280125,
+    "segments": 13646620,
+    "shape_points": 68192684,
+    "shape_points_kept": 32523435,
+    "graph_seconds": 92.27587509155273,
+    "nodes": 10087441,
+    "edges": 25145857,
+    "ch_forward_arcs": 23698932,
+    "ch_backward_arcs": 23704771,
+    "sections": {
+      "header": 72,
+      "nodes": 121049304,
+      "edges": 704083996,
+      "grid": 522676384,
+      "geometry": 278949636,
+      "names": 20710737,
+      "ch_forward": 419532684,
+      "ch_backward": 419626108,
+      "total": 2486628924,
+      "unique_names": 867364,
+      "grid_cells": 35394079
+    },
+    "load_seconds": 231.17631101608276,
+    "ch_seconds": 127.71263003349304,
+    "total_seconds": 456.9145579338074
+  },
+  "map": {
+    "nodes": 10087441,
+    "edges": 25145857,
+    "bounds": [
+      -33.755615,
+      -73.6699738,
+      5.3543118,
+      -32.3982471
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 16509,
+      "rows": 15644,
+      "non_empty": 35394079
+    },
+    "ch_arcs": {
+      "forward": 23698932,
+      "backward": 23704771
+    },
+    "directed_km": 7134709.93,
+    "sections": {
+      "header": 72,
+      "nodes": 121049304,
+      "edges": 704083996,
+      "grid": 522676384,
+      "geometry": 278949636,
+      "names": 20710740,
+      "ch_forward": 419532684,
+      "ch_backward": 419626108
+    },
+    "size": 2486628924,
+    "edges_by_class": {
+      "motorway": 81048,
+      "trunk": 336315,
+      "primary": 664358,
+      "secondary": 1088858,
+      "tertiary": 2029210,
+      "unclassified": 5121428,
+      "residential": 14057721,
+      "service": 1766919
+    }
+  },
+  "routes": {
+    "routes": 193,
+    "unreachable": 7,
+    "route_km": {
+      "median": 1690.438,
+      "p95": 3434.639,
+      "max": 4065.692
+    },
+    "settled_nodes": {
+      "median": 630,
+      "p95": 934,
+      "max": 1234
+    },
+    "query_kb_read": {
+      "median": 7684.0,
+      "p95": 13504.0,
+      "max": 16512.0
+    },
+    "route_kb_read": {
+      "median": 11956.0,
+      "p95": 23984.0,
+      "max": 30352.0
+    },
+    "python_ms": {
+      "median": 2.7390830000513233,
+      "p95": 5.037709000134782,
+      "max": 8.298707999529142
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 3432139.6,
+    "page_size": 4096,
+    "reader_peak_rss": 6168805376
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

@@ -1,0 +1,118 @@
+{
+  "name": "new-york",
+  "label": "New York",
+  "group": "city",
+  "extract": {
+    "file": "NewYork.osm.pbf",
+    "bytes": 153267016,
+    "date": "2026-10-16"
+  },
+  "build": {
+    "seconds": 9.326081991195679,
+    "peak_rss": 1990737920,
+    "osm_ways": 212340,
+    "osm_nodes": 1110586,
+    "segments": 388283,
+    "shape_points": 824113,
+    "shape_points_kept": 185223,
+    "graph_seconds": 0.9339900016784668,
+    "nodes": 286473,
+    "edges": 657955,
+    "ch_forward_arcs": 618716,
+    "ch_backward_arcs": 618862,
+    "sections": {
+      "header": 72,
+      "nodes": 3437688,
+      "edges": 18422740,
+      "grid": 2679064,
+      "geometry": 1831676,
+      "names": 342330,
+      "ch_forward": 11045356,
+      "ch_backward": 11047692,
+      "total": 48806620,
+      "unique_names": 22960,
+      "grid_cells": 38841
+    },
+    "load_seconds": 5.09150505065918,
+    "ch_seconds": 3.1287882328033447,
+    "total_seconds": 9.21622610092163
+  },
+  "map": {
+    "nodes": 286473,
+    "edges": 657955,
+    "bounds": [
+      40.4741666,
+      -74.3702206,
+      40.9858822,
+      -73.653363
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 287,
+      "rows": 205,
+      "non_empty": 38841
+    },
+    "ch_arcs": {
+      "forward": 618716,
+      "backward": 618862
+    },
+    "directed_km": 54578.352,
+    "sections": {
+      "header": 72,
+      "nodes": 3437688,
+      "edges": 18422740,
+      "grid": 2679064,
+      "geometry": 1831676,
+      "names": 342332,
+      "ch_forward": 11045356,
+      "ch_backward": 11047692
+    },
+    "size": 48806620,
+    "edges_by_class": {
+      "motorway": 13617,
+      "trunk": 7231,
+      "primary": 41256,
+      "secondary": 55934,
+      "tertiary": 62552,
+      "unclassified": 9007,
+      "residential": 283069,
+      "service": 185289
+    }
+  },
+  "routes": {
+    "routes": 186,
+    "unreachable": 14,
+    "route_km": {
+      "median": 33.943,
+      "p95": 66.03,
+      "max": 78.541
+    },
+    "settled_nodes": {
+      "median": 363,
+      "p95": 571,
+      "max": 671
+    },
+    "query_kb_read": {
+      "median": 1836.0,
+      "p95": 2604.0,
+      "max": 2836.0
+    },
+    "route_kb_read": {
+      "median": 2176.0,
+      "p95": 3068.0,
+      "max": 3432.0
+    },
+    "python_ms": {
+      "median": 0.71279100029642,
+      "p95": 1.0832500001924927,
+      "max": 1.8818339995050337
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 56858.6,
+    "page_size": 4096,
+    "reader_peak_rss": 159432704
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

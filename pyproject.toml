@@ -20,6 +20,7 @@ dependencies = ["osmium>=3.6", "numpy", "pillow"]
 
 [project.optional-dependencies]
 test = ["pytest"]
+bench = ["shapely"]
 
 [project.scripts]
 roadpack = "roadpack.cli:main"

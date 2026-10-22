@@ -1,0 +1,118 @@
+{
+  "name": "mexico-city",
+  "label": "Mexico City",
+  "group": "city",
+  "extract": {
+    "file": "MexicoCity.osm.pbf",
+    "bytes": 19249601,
+    "date": "2026-10-16"
+  },
+  "build": {
+    "seconds": 3.9950599670410156,
+    "peak_rss": 1877016576,
+    "osm_ways": 92794,
+    "osm_nodes": 333405,
+    "segments": 209733,
+    "shape_points": 182268,
+    "shape_points_kept": 58633,
+    "graph_seconds": 0.2979550361633301,
+    "nodes": 151137,
+    "edges": 339868,
+    "ch_forward_arcs": 345807,
+    "ch_backward_arcs": 346463,
+    "sections": {
+      "header": 72,
+      "nodes": 1813656,
+      "edges": 9516304,
+      "grid": 1254412,
+      "geometry": 590340,
+      "names": 488238,
+      "ch_forward": 6137468,
+      "ch_backward": 6147964,
+      "total": 25948456,
+      "unique_names": 23223,
+      "grid_cells": 11306
+    },
+    "load_seconds": 1.6206879615783691,
+    "ch_seconds": 1.957888126373291,
+    "total_seconds": 3.909862995147705
+  },
+  "map": {
+    "nodes": 151137,
+    "edges": 339868,
+    "bounds": [
+      19.2881966,
+      -99.2827149,
+      19.5654717,
+      -98.9323248
+    ],
+    "grid": {
+      "cell_deg": 0.0025,
+      "cols": 141,
+      "rows": 111,
+      "non_empty": 11306
+    },
+    "ch_arcs": {
+      "forward": 345807,
+      "backward": 346463
+    },
+    "directed_km": 24726.979,
+    "sections": {
+      "header": 72,
+      "nodes": 1813656,
+      "edges": 9516304,
+      "grid": 1254412,
+      "geometry": 590340,
+      "names": 488240,
+      "ch_forward": 6137468,
+      "ch_backward": 6147964
+    },
+    "size": 25948456,
+    "edges_by_class": {
+      "motorway": 2927,
+      "trunk": 1758,
+      "primary": 11275,
+      "secondary": 22723,
+      "tertiary": 36938,
+      "unclassified": 2560,
+      "residential": 215832,
+      "service": 45855
+    }
+  },
+  "routes": {
+    "routes": 197,
+    "unreachable": 3,
+    "route_km": {
+      "median": 18.074,
+      "p95": 34.759,
+      "max": 46.222
+    },
+    "settled_nodes": {
+      "median": 345,
+      "p95": 522,
+      "max": 554
+    },
+    "query_kb_read": {
+      "median": 1508.0,
+      "p95": 2228.0,
+      "max": 2484.0
+    },
+    "route_kb_read": {
+      "median": 1728.0,
+      "p95": 2584.0,
+      "max": 2964.0
+    },
+    "python_ms": {
+      "median": 0.6497080003100564,
+      "p95": 1.0134580006706528,
+      "max": 1.5470839998670272
+    },
+    "astar_checked": 5,
+    "astar_mismatches": 0,
+    "astar_settled_mean": 52646.4,
+    "page_size": 4096,
+    "reader_peak_rss": 115228672
+  },
+  "machine": "arm64 Darwin, 10 cores",
+  "measured": "2026-10-22"
+}

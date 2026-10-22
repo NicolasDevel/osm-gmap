@@ -19,6 +19,12 @@ EDGE_DTYPE = np.dtype([
 CH_ARC_DTYPE = np.dtype([("other", "<u4"), ("weight", "<u4"), ("a", "<u4"), ("b", "<u4")])
 
 
+def _column(values):
+    """Read-only column with fast element access that returns Python numbers, at 4–8 bytes per value
+    (a list would take ~32): big maps fit in memory."""
+    return memoryview(np.ascontiguousarray(values))
+
+
 class ChSide:
     """One side of the contraction hierarchy: upward adjacency lists, indexed by node."""
 
@@ -26,12 +32,14 @@ class ChSide:
         arcs = int(np.frombuffer(data, "<u4", 1, offset)[0])
         first = np.frombuffer(data, "<u4", node_count + 1, offset + 4)
         recs = np.frombuffer(data, CH_ARC_DTYPE, arcs, offset + 4 + (node_count + 1) * 4)
-        self.first = first.tolist()
-        self.other = recs["other"].tolist()
-        self.weight = recs["weight"].tolist()
-        self.a = recs["a"].tolist()
-        self.b = recs["b"].tolist()
+        self.first = _column(first)
+        self.other = _column(recs["other"])
+        self.weight = _column(recs["weight"])
+        self.a = _column(recs["a"])
+        self.b = _column(recs["b"])
         self.arc_count = arcs
+        self.first_off = offset + 4  # file offsets, to measure what a device reads
+        self.arcs_off = offset + 4 + (node_count + 1) * 4
 
 
 class Gmap:
@@ -58,23 +66,23 @@ class Gmap:
         # Sparse spatial grid: sorted non-empty cells, where each one starts, and the edges.
         grid_off = self.grid_off
         cell_count = int(np.frombuffer(self.data, "<u4", 1, grid_off)[0])
-        self.cell_ids = np.frombuffer(self.data, "<u4", cell_count, grid_off + 4).tolist()
+        self.cell_ids = _column(np.frombuffer(self.data, "<u4", cell_count, grid_off + 4))
         self.cell_start = np.frombuffer(self.data, "<u4", cell_count + 1, grid_off + 4 + cell_count * 4)
         self.cell_items = np.frombuffer(self.data, "<u4", int(self.cell_start[-1]),
                                         grid_off + 4 + (2 * cell_count + 1) * 4)
 
-        # Python lists: element access is much faster than numpy inside loops.
-        self.lat = (nodes["lat"] / SCALE).tolist()
-        self.lon = (nodes["lon"] / SCALE).tolist()
-        self.first_edge = nodes["first_edge"].tolist()
-        self.source = edges["source"].tolist()
-        self.target = edges["target"].tolist()
-        self.geom = edges["geom"].tolist()
-        self.name_ref = edges["name"].tolist()
-        self.length = edges["length"].tolist()
-        self.weight = edges["weight"].tolist()
-        self.speed = edges["speed"].tolist()
-        self.flags = edges["flags"].tolist()
+        # Element access on numpy arrays is slow inside Python loops; memoryviews are as fast as lists.
+        self.lat = _column(nodes["lat"] / SCALE)
+        self.lon = _column(nodes["lon"] / SCALE)
+        self.first_edge = _column(nodes["first_edge"])
+        self.source = _column(edges["source"])
+        self.target = _column(edges["target"])
+        self.geom = _column(edges["geom"])
+        self.name_ref = _column(edges["name"])
+        self.length = _column(edges["length"])
+        self.weight = _column(edges["weight"])
+        self.speed = _column(edges["speed"])
+        self.flags = _column(edges["flags"])
         self._in_edges = None
 
         self.ch_fwd = ChSide(self.data, self.ch_fwd_off, self.node_count)
