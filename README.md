@@ -8,8 +8,8 @@
 
 roadpack compiles an OpenStreetMap extract into a `.gmap`: a compact binary road graph with a precomputed
 **contraction hierarchy**, laid out so that a device with a few MB of RAM routes straight from a microSD card,
-without ever loading the map. All of Colombia is 287 MB, and an ESP32-S3 finds the ~970 km route from Bogotá to
-Cartagena in about 8 seconds.
+without ever loading the map. All of Colombia is 287 MB, and an ESP32-S3 finds the 963 km route from Bogotá to
+Cartagena in under 3 seconds, with a cold cache ([on the device](#on-the-device)).
 
 [Leer en español](README.es.md)
 
@@ -109,6 +109,33 @@ From the [benchmarks](benchmarks/README.md): motorcycle profile, 200 random rout
 The benchmarks also cover Mexico City, Lima, Buenos Aires, Santiago, Washington DC, Ottawa, Toronto, New York,
 Madrid, Barcelona, Paris, Berlin, Canada, Texas, New York State and Colombia by department.
 [How large countries fit in a laptop, and the evidence that they are exact](docs/SCALING.md).
+
+## On the device
+
+Measured on the navigator this was built for: an ESP32-S3 with a 2 MB page cache in PSRAM (4 KiB pages), reading
+the Colombia map from a microSD card in 1-bit mode at 40 MHz, with the cache empty before each route.
+
+| Route | Distance | Route found | Ready to navigate | SD card reads |
+|---|---:|---:|---:|---:|
+| Across Bogotá | 15 km | 0.9 s | 1.3 s | 396 |
+| Bogotá – San Francisco | 62 km | 0.9 s | 1.3 s | 430 |
+| Bogotá – Medellín | 427 km | 1.8 s | 2.8 s | 934 |
+| Bogotá – Cartagena | 963 km | 2.8 s | 4.4 s | 1,484 |
+
+*Route found* is the hierarchy query plus unpacking the shortcuts into edges. *Ready to navigate* adds the
+shapes and maneuvers of the first 15 km and the length of the whole route.
+
+What made the difference:
+
+- **The time is spent waiting for the card.** Each random 4 KiB read costs about 2.8 ms and the computation is
+  negligible, so the number to watch is reads per route (what `roadpack stats` reports). Larger pages were slower:
+  the cost grows with the bytes read.
+- **Build the shapes as you go.** Reading the shapes and checking every intersection of a 963 km route costs more
+  than finding it (1,352 reads), so the navigator only builds 15 km ahead of the rider. Bogotá–Cartagena went from
+  8.2 to 4.4 s.
+- **Use a genuine card.** A counterfeit one (sold as a known brand, but its CID reports manufacturer 0x6F)
+  stalled for about 9 s in one route out of three and sometimes failed a read even after retries. A failed read
+  silently leaves zeros where the data should be, so the device counts them and computes the route again.
 
 ## Limits
 

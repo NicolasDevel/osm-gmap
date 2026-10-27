@@ -9,7 +9,7 @@
 roadpack compila un extracto de OpenStreetMap en un `.gmap`: un grafo vial binario y compacto con una
 **jerarquía de contracción** precalculada, organizado para que un dispositivo con unos pocos MB de RAM rutee
 leyendo directo de una microSD, sin cargar nunca el mapa. Toda Colombia ocupa 287 MB, y un ESP32-S3 encuentra la
-ruta de ~970 km de Bogotá a Cartagena en unos 8 segundos.
+ruta de 963 km de Bogotá a Cartagena en menos de 3 segundos, con la caché vacía ([en el dispositivo](#en-el-dispositivo)).
 
 [Read in English](README.md)
 
@@ -111,6 +111,34 @@ portátil de 16 GB.
 Los benchmarks también incluyen Ciudad de México, Lima, Buenos Aires, Santiago, Washington DC, Ottawa, Toronto,
 Nueva York, Madrid, Barcelona, París, Berlín, Canadá, Texas, el estado de Nueva York y Colombia por departamento.
 [Cómo caben los países grandes en un portátil, y la evidencia de que los mapas son exactos](docs/SCALING.md).
+
+## En el dispositivo
+
+Medido en el navegador para el que se hizo: un ESP32-S3 con una caché de páginas de 2 MB en PSRAM (páginas de
+4 KiB), leyendo el mapa de Colombia de una microSD en modo de 1 bit a 40 MHz, con la caché vacía antes de cada ruta.
+
+| Ruta | Distancia | Ruta encontrada | Lista para navegar | Lecturas de la SD |
+|---|---:|---:|---:|---:|
+| Bogotá de lado a lado | 15 km | 0,9 s | 1,3 s | 396 |
+| Bogotá – San Francisco | 62 km | 0,9 s | 1,3 s | 430 |
+| Bogotá – Medellín | 427 km | 1,8 s | 2,8 s | 934 |
+| Bogotá – Cartagena | 963 km | 2,8 s | 4,4 s | 1.484 |
+
+*Ruta encontrada* es la consulta en la jerarquía más desarmar los atajos en aristas. *Lista para navegar* suma las
+formas y maniobras de los primeros 15 km y el largo de toda la ruta.
+
+Lo que hizo la diferencia:
+
+- **El tiempo se va en esperar a la tarjeta.** Cada lectura al azar de 4 KiB cuesta unos 2,8 ms y el cálculo casi
+  no pesa, así que lo que hay que mirar son las lecturas por ruta (lo que reporta `roadpack stats`). Las páginas
+  más grandes fueron más lentas: el costo crece con los bytes leídos.
+- **Armar las formas sobre la marcha.** Leer las formas y revisar cada cruce de una ruta de 963 km cuesta más que
+  encontrarla (1.352 lecturas), así que el navegador solo arma 15 km por delante. Bogotá–Cartagena pasó de 8,2 a
+  4,4 s.
+- **Usar una tarjeta original.** Una falsificada (vendida como de marca conocida, pero su CID dice fabricante 0x6F)
+  se frenaba unos 9 s en una de cada tres rutas y a veces fallaba una lectura aun con reintentos. Una lectura
+  fallida deja ceros donde iban los datos, sin avisar, así que el dispositivo las cuenta y vuelve a calcular la
+  ruta.
 
 ## Límites
 
