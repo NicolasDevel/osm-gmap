@@ -39,7 +39,8 @@ def test_round_trip_nodes_and_edges(written):
         assert g.name(i) == (graph.names[n] if n >= 0 else "")
         interior = graph.interior(s)
         expected = interior if graph.source[i] == graph.seg_a[s] else interior[::-1]
-        assert g.polyline(i)[1:-1] == pytest.approx(expected, abs=1e-7)
+        flat = [c for point in g.polyline(i)[1:-1] for c in point]  # approx() rejects nested sequences (pytest 9.2)
+        assert flat == pytest.approx([c for point in expected for c in point], abs=1e-7)
         assert (g.geom[i] == NONE) == (not interior)
 
 
