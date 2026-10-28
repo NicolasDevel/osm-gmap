@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Renders docs/img/hero.png: a country's whole road graph with a long route, and three maneuver screens.
 
-    python docs/make_hero.py data/out/colombia.gmap --from 4.6097,-74.0817 --to 10.3910,-75.4794
+    python docs/make_hero.py out/colombia.gmap --from 4.6097,-74.0817 --to 10.3910,-75.4794 --device-seconds 3.4
+
+--device-seconds is the time measured on the device for this route (it cannot be computed here).
 """
 import argparse
 import math
@@ -30,6 +32,8 @@ def main():
     parser.add_argument("gmap", type=Path)
     parser.add_argument("--from", dest="origin", type=point, required=True)
     parser.add_argument("--to", dest="dest", type=point, required=True)
+    parser.add_argument("--device-seconds", type=float, required=True,
+                        help="time to route it on the ESP32-S3, as measured there")
     args = parser.parse_args()
 
     g = Gmap(args.gmap)
@@ -70,7 +74,7 @@ def main():
         f"Bogotá → Cartagena, {km:,.0f} km",
         f"{g.node_count / 1e6:.2f} M nodes, whole country: {len(g.data) / 1e6:,.0f} MB on a microSD",
         f"contraction hierarchy: {stats['settled']} nodes settled for the route",
-        "routed on an ESP32-S3 in 8 s, offline",
+        f"routed on an ESP32-S3 in {args.device_seconds:g} s, offline",
     ]
     for i, line in enumerate(facts):
         d.text((x0, (225 + 44 * i) * SCALE), line, font=font(26 * SCALE), fill=TEXT if i == 0 else DIM)

@@ -8,8 +8,8 @@
 
 roadpack compila un extracto de OpenStreetMap en un `.gmap`: un grafo vial binario y compacto con una
 **jerarquía de contracción** precalculada, organizado para que un dispositivo con unos pocos MB de RAM rutee
-leyendo directo de una microSD, sin cargar nunca el mapa. Toda Colombia ocupa 287 MB, y un ESP32-S3 encuentra la
-ruta de 963 km de Bogotá a Cartagena en menos de 3 segundos, con la caché vacía ([en el dispositivo](#en-el-dispositivo)).
+leyendo directo de una microSD, sin cargar nunca el mapa. Toda Colombia ocupa 280 MB, con las restricciones de
+giro, y un ESP32-S3 encuentra la ruta de 963 km de Bogotá a Cartagena en menos de 3 segundos, con la caché vacía ([en el dispositivo](#en-el-dispositivo)).
 
 [Read in English](README.md)
 
@@ -100,13 +100,13 @@ portátil de 16 GB.
 
 | Región | Nodos del grafo | `.gmap` | Construcción | Ruta mediana | Nodos asentados (mediana) | A* asienta | KB leídos por consulta |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Bogotá | 89 mil | 15 MB | 2 s | 14 km | 236 | 31 mil | 972 |
-| Londres | 415 mil | 62 MB | 10 s | 31 km | 370 | 84 mil | 1.976 |
-| Tokio | 235 mil | 42 MB | 7 s | 17 km | 438 | 82 mil | 1.936 |
-| Colombia | 1,26 M | 287 MB | 52 s | 617 km | 275 | 458 mil | 2.980 |
-| España | 3,28 M | 620 MB | 2 min | 550 km | 459 | 578 mil | 3.664 |
-| California | 2,89 M | 513 MB | 80 s | 522 km | 523 | 614 mil | 4.296 |
-| Brasil | 10,1 M | 2,5 GB | 8 min | 1.690 km | 630 | 3,4 M | 7.684 |
+| Bogotá | 91 mil | 15 MB | 2 s | 15 km | 272 | 29 mil | 1.072 |
+| Londres | 419 mil | 62 MB | 10 s | 31 km | 389 | 83 mil | 2.048 |
+| Tokio | 236 mil | 42 MB | 6 s | 17 km | 462 | 81 mil | 2.116 |
+| Colombia | 1,27 M | 288 MB | 59 s | 610 km | 294 | 439 mil | 2.952 |
+| España | 3,41 M | 632 MB | 2 min | 563 km | 420 | 545 mil | 3.580 |
+| California | 2,94 M | 523 MB | 85 s | 408 km | 566 | 1,09 M | 4.480 |
+| Brasil | 10,2 M | 2,5 GB | 7 min | 1.674 km | 693 | 3,59 M | 8.036 |
 
 Los benchmarks también incluyen Ciudad de México, Lima, Buenos Aires, Santiago, Washington DC, Ottawa, Toronto,
 Nueva York, Madrid, Barcelona, París, Berlín, Canadá, Texas, el estado de Nueva York y Colombia por departamento.
@@ -115,17 +115,18 @@ Nueva York, Madrid, Barcelona, París, Berlín, Canadá, Texas, el estado de Nue
 ## En el dispositivo
 
 Medido en el navegador para el que se hizo: un ESP32-S3 con una caché de páginas de 2 MB en PSRAM (páginas de
-4 KiB), leyendo el mapa de Colombia de una microSD en modo de 1 bit a 40 MHz, con la caché vacía antes de cada ruta.
+4 KiB), leyendo el mapa de Colombia (v3, con restricciones de giro; datos de OSM del 27-10-2026) de una microSD en
+modo de 1 bit a 40 MHz, con la caché vacía antes de cada ruta. Mediana de 10 corridas.
 
 | Ruta | Distancia | Ruta encontrada | Lista para navegar | Lecturas de la SD |
 |---|---:|---:|---:|---:|
-| Bogotá de lado a lado | 15 km | 0,9 s | 1,3 s | 396 |
-| Bogotá – San Francisco | 62 km | 0,9 s | 1,3 s | 430 |
-| Bogotá – Medellín | 427 km | 1,8 s | 2,8 s | 934 |
-| Bogotá – Cartagena | 963 km | 2,8 s | 4,4 s | 1.484 |
+| Bogotá de lado a lado | 15 km | 0,9 s | 1,4 s | 423 |
+| Bogotá – San Francisco | 62 km | 1,0 s | 1,4 s | 464 |
+| Bogotá – Medellín | 427 km | 2,0 s | 2,5 s | 839 |
+| Bogotá – Cartagena | 963 km | 2,9 s | 3,4 s | 1.139 |
 
 *Ruta encontrada* es la consulta en la jerarquía más desarmar los atajos en aristas. *Lista para navegar* suma las
-formas y maniobras de los primeros 15 km y el largo de toda la ruta.
+formas y maniobras de los primeros 15 km.
 
 Lo que hizo la diferencia:
 
@@ -134,11 +135,13 @@ Lo que hizo la diferencia:
   más grandes fueron más lentas: el costo crece con los bytes leídos.
 - **Armar las formas sobre la marcha.** Leer las formas y revisar cada cruce de una ruta de 963 km cuesta más que
   encontrarla (1.352 lecturas), así que el navegador solo arma 15 km por delante. Bogotá–Cartagena pasó de 8,2 a
-  4,4 s.
+  4,4 s. Sumar el largo del resto de la ruta en marcha, y no antes de mostrarla, ahorró otras ~400 lecturas:
+  mientras tanto, la distancia que falta se estima con el tiempo de recorrido de las aristas.
 - **Usar una tarjeta original.** Una falsificada (vendida como de marca conocida, pero su CID dice fabricante 0x6F)
   se frenaba unos 9 s en una de cada tres rutas y a veces fallaba una lectura aun con reintentos. Una lectura
   fallida deja ceros donde iban los datos, sin avisar, así que el dispositivo las cuenta y vuelve a calcular la
-  ruta.
+  ruta. La misma tarjeta guardó una vez una copia del mapa con 16 KB de un pedazo cambiados por otros datos, sin
+  ningún error: hay que comparar los archivos después de copiarlos a la tarjeta.
 
 ## Límites
 

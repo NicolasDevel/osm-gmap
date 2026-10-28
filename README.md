@@ -8,8 +8,8 @@
 
 roadpack compiles an OpenStreetMap extract into a `.gmap`: a compact binary road graph with a precomputed
 **contraction hierarchy**, laid out so that a device with a few MB of RAM routes straight from a microSD card,
-without ever loading the map. All of Colombia is 287 MB, and an ESP32-S3 finds the 963 km route from Bogotá to
-Cartagena in under 3 seconds, with a cold cache ([on the device](#on-the-device)).
+without ever loading the map. All of Colombia is 280 MB, turn restrictions included, and an ESP32-S3 finds the 963 km
+route from Bogotá to Cartagena in under 3 seconds, with a cold cache ([on the device](#on-the-device)).
 
 [Leer en español](README.es.md)
 
@@ -98,13 +98,13 @@ From the [benchmarks](benchmarks/README.md): motorcycle profile, 200 random rout
 
 | Region | Graph nodes | `.gmap` | Build | Median route | Nodes settled (median) | A* settles | KB read per query |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Bogotá | 89 k | 15 MB | 2 s | 14 km | 236 | 31 k | 972 |
-| London | 415 k | 62 MB | 10 s | 31 km | 370 | 84 k | 1,976 |
-| Tokyo | 235 k | 42 MB | 7 s | 17 km | 438 | 82 k | 1,936 |
-| Colombia | 1.26 M | 287 MB | 52 s | 617 km | 275 | 458 k | 2,980 |
-| Spain | 3.28 M | 620 MB | 2 min | 550 km | 459 | 578 k | 3,664 |
-| California | 2.89 M | 513 MB | 80 s | 522 km | 523 | 614 k | 4,296 |
-| Brazil | 10.1 M | 2.5 GB | 8 min | 1,690 km | 630 | 3.4 M | 7,684 |
+| Bogotá | 91 k | 15 MB | 2 s | 15 km | 272 | 29 k | 1,072 |
+| London | 419 k | 62 MB | 10 s | 31 km | 389 | 83 k | 2,048 |
+| Tokyo | 236 k | 42 MB | 6 s | 17 km | 462 | 81 k | 2,116 |
+| Colombia | 1.27 M | 288 MB | 59 s | 610 km | 294 | 439 k | 2,952 |
+| Spain | 3.41 M | 632 MB | 2 min | 563 km | 420 | 545 k | 3,580 |
+| California | 2.94 M | 523 MB | 85 s | 408 km | 566 | 1.09 M | 4,480 |
+| Brazil | 10.2 M | 2.5 GB | 7 min | 1,674 km | 693 | 3.59 M | 8,036 |
 
 The benchmarks also cover Mexico City, Lima, Buenos Aires, Santiago, Washington DC, Ottawa, Toronto, New York,
 Madrid, Barcelona, Paris, Berlin, Canada, Texas, New York State and Colombia by department.
@@ -113,17 +113,18 @@ Madrid, Barcelona, Paris, Berlin, Canada, Texas, New York State and Colombia by 
 ## On the device
 
 Measured on the navigator this was built for: an ESP32-S3 with a 2 MB page cache in PSRAM (4 KiB pages), reading
-the Colombia map from a microSD card in 1-bit mode at 40 MHz, with the cache empty before each route.
+the Colombia map (v3, with turn restrictions; OSM data of 2026-10-27) from a microSD card in 1-bit mode at
+40 MHz, with the cache empty before each route. Median of 10 runs.
 
 | Route | Distance | Route found | Ready to navigate | SD card reads |
 |---|---:|---:|---:|---:|
-| Across Bogotá | 15 km | 0.9 s | 1.3 s | 396 |
-| Bogotá – San Francisco | 62 km | 0.9 s | 1.3 s | 430 |
-| Bogotá – Medellín | 427 km | 1.8 s | 2.8 s | 934 |
-| Bogotá – Cartagena | 963 km | 2.8 s | 4.4 s | 1,484 |
+| Across Bogotá | 15 km | 0.9 s | 1.4 s | 423 |
+| Bogotá – San Francisco | 62 km | 1.0 s | 1.4 s | 464 |
+| Bogotá – Medellín | 427 km | 2.0 s | 2.5 s | 839 |
+| Bogotá – Cartagena | 963 km | 2.9 s | 3.4 s | 1,139 |
 
 *Route found* is the hierarchy query plus unpacking the shortcuts into edges. *Ready to navigate* adds the
-shapes and maneuvers of the first 15 km and the length of the whole route.
+shapes and maneuvers of the first 15 km.
 
 What made the difference:
 
@@ -132,10 +133,13 @@ What made the difference:
   the cost grows with the bytes read.
 - **Build the shapes as you go.** Reading the shapes and checking every intersection of a 963 km route costs more
   than finding it (1,352 reads), so the navigator only builds 15 km ahead of the rider. Bogotá–Cartagena went from
-  8.2 to 4.4 s.
+  8.2 to 4.4 s. Adding up the length of the rest of the route while riding, instead of before showing it, saved
+  another ~400 reads: until then the remaining distance is estimated from the travel time of the edges.
 - **Use a genuine card.** A counterfeit one (sold as a known brand, but its CID reports manufacturer 0x6F)
   stalled for about 9 s in one route out of three and sometimes failed a read even after retries. A failed read
-  silently leaves zeros where the data should be, so the device counts them and computes the route again.
+  silently leaves zeros where the data should be, so the device counts them and computes the route again. The same
+  card once stored a copy of the map with 16 KB of one chunk replaced by other data, without any error: compare
+  the files after copying them to the card.
 
 ## Limits
 
