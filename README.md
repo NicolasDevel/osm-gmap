@@ -8,7 +8,7 @@
 
 roadpack compiles an OpenStreetMap extract into a `.gmap`: a compact binary road graph with a precomputed
 **contraction hierarchy**, laid out so that a device with a few MB of RAM routes straight from a microSD card,
-without ever loading the map. All of Colombia is 280 MB, turn restrictions included, and an ESP32-S3 finds the 963 km
+without ever loading the map. All of Colombia is 256 MB, turn restrictions included, and an ESP32-S3 finds the 963 km
 route from Bogotá to Cartagena in under 3 seconds, with a cold cache ([on the device](#on-the-device)).
 
 [Leer en español](README.es.md)
@@ -98,13 +98,13 @@ From the [benchmarks](benchmarks/README.md): motorcycle profile, 200 random rout
 
 | Region | Graph nodes | `.gmap` | Build | Median route | Nodes settled (median) | A* settles | KB read per query |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Bogotá | 91 k | 15 MB | 2 s | 15 km | 272 | 29 k | 1,072 |
-| London | 419 k | 62 MB | 10 s | 31 km | 389 | 83 k | 2,048 |
-| Tokyo | 236 k | 42 MB | 6 s | 17 km | 462 | 81 k | 2,116 |
-| Colombia | 1.27 M | 288 MB | 59 s | 610 km | 294 | 439 k | 2,952 |
-| Spain | 3.41 M | 632 MB | 2 min | 563 km | 420 | 545 k | 3,580 |
-| California | 2.94 M | 523 MB | 85 s | 408 km | 566 | 1.09 M | 4,480 |
-| Brazil | 10.2 M | 2.5 GB | 7 min | 1,674 km | 693 | 3.59 M | 8,036 |
+| Bogotá | 91 k | 15 MB | 5 s | 15 km | 272 | 29 k | 1,072 |
+| London | 419 k | 62 MB | 11 s | 31 km | 389 | 83 k | 2,040 |
+| Tokyo | 236 k | 42 MB | 7 s | 17 km | 462 | 81 k | 2,112 |
+| Colombia | 1.27 M | 263 MB | 54 s | 610 km | 294 | 439 k | 2,972 |
+| Spain | 3.41 M | 603 MB | 2 min | 563 km | 420 | 545 k | 3,560 |
+| California | 2.94 M | 505 MB | 95 s | 408 km | 566 | 1.09 M | 4,496 |
+| Brazil | 10.2 M | 2.2 GB | 8 min | 1,674 km | 693 | 3.59 M | 8,020 |
 
 The benchmarks also cover Mexico City, Lima, Buenos Aires, Santiago, Washington DC, Ottawa, Toronto, New York,
 Madrid, Barcelona, Paris, Berlin, Canada, Texas, New York State and Colombia by department.
@@ -143,9 +143,9 @@ What made the difference:
 
 ## Limits
 
-- The `.gmap` format addresses 4 GiB and about 164° of longitude: Brazil fits (2.5 GB); the whole United
+- The `.gmap` format addresses 4 GiB and about 164° of longitude: Brazil fits (2.2 GB); the whole United
   States does not, so it is built per state.
-- Building needs at least about 1.5 GB of RAM, and 8 GB for Brazil.
+- Building needs at least about 1.5 GB of RAM, and about 9 GB for Brazil.
 - Turn restrictions with a via node are applied (in Colombia, 5,913 of 7,125); those with a via way and the
   time-dependent ones are not. Speeds come from `maxspeed` or a default per road class (no traffic).
 - The microcontroller side is specified in FORMAT.md and implemented in Python here; a portable C reader is

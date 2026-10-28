@@ -8,14 +8,14 @@
     "date": "2026-10-16"
   },
   "build": {
-    "seconds": 9.010211706161499,
-    "peak_rss": 1998077952,
+    "seconds": 10.139079809188843,
+    "peak_rss": 1991098368,
     "osm_ways": 212340,
     "osm_nodes": 1110586,
     "segments": 388283,
     "shape_points": 824113,
     "shape_points_kept": 185223,
-    "graph_seconds": 0.848214864730835,
+    "graph_seconds": 0.9294860363006592,
     "restrictions": 13118,
     "restrictions_applied": 10159,
     "restrictions_not_found": 1180,
@@ -31,19 +31,19 @@
       "header": 80,
       "nodes": 3547992,
       "edges": 18846436,
-      "grid": 2679064,
+      "grid": 2564560,
       "geometry": 1831676,
       "names": 342330,
       "ch_forward": 11480524,
       "ch_backward": 11338812,
       "copies": 73536,
-      "total": 50140452,
+      "total": 50025948,
       "unique_names": 22960,
-      "grid_cells": 38841
+      "grid_cells": 37313
     },
-    "load_seconds": 4.900402069091797,
-    "ch_seconds": 2.938257932662964,
-    "total_seconds": 8.93717622756958
+    "load_seconds": 5.541588068008423,
+    "ch_seconds": 2.927393913269043,
+    "total_seconds": 10.066313028335571
   },
   "map": {
     "nodes": 295665,
@@ -58,7 +58,7 @@
       "cell_deg": 0.0025,
       "cols": 287,
       "rows": 205,
-      "non_empty": 38841
+      "non_empty": 37313
     },
     "ch_arcs": {
       "forward": 643616,
@@ -69,14 +69,14 @@
       "header": 80,
       "nodes": 3547992,
       "edges": 18846436,
-      "grid": 2679064,
+      "grid": 2564560,
       "geometry": 1831676,
       "names": 342332,
       "ch_forward": 11480524,
       "ch_backward": 11338812,
       "copies": 73536
     },
-    "size": 50140452,
+    "size": 50025948,
     "version": 3,
     "junction_copies": 9192,
     "edges_by_class": {
@@ -104,25 +104,25 @@
       "max": 713
     },
     "query_kb_read": {
-      "median": 2004.0,
-      "p95": 2900.0,
+      "median": 1992.0,
+      "p95": 2868.0,
       "max": 3156.0
     },
     "route_kb_read": {
-      "median": 2384.0,
-      "p95": 3336.0,
-      "max": 3780.0
+      "median": 2380.0,
+      "p95": 3312.0,
+      "max": 3784.0
     },
     "python_ms": {
-      "median": 0.7242080027936026,
-      "p95": 1.090666999516543,
-      "max": 1.2218340052640997
+      "median": 0.7250000053318217,
+      "p95": 1.0939999992842786,
+      "max": 1.2312500039115548
     },
     "astar_checked": 5,
     "astar_mismatches": 0,
     "astar_settled_mean": 44534.8,
     "page_size": 4096,
-    "reader_peak_rss": 162725888
+    "reader_peak_rss": 162365440
   },
   "machine": "arm64 Darwin, 10 cores",
   "measured": "2026-10-28"

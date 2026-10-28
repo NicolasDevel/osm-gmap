@@ -8,7 +8,7 @@
 
 roadpack compila un extracto de OpenStreetMap en un `.gmap`: un grafo vial binario y compacto con una
 **jerarquía de contracción** precalculada, organizado para que un dispositivo con unos pocos MB de RAM rutee
-leyendo directo de una microSD, sin cargar nunca el mapa. Toda Colombia ocupa 280 MB, con las restricciones de
+leyendo directo de una microSD, sin cargar nunca el mapa. Toda Colombia ocupa 256 MB, con las restricciones de
 giro, y un ESP32-S3 encuentra la ruta de 963 km de Bogotá a Cartagena en menos de 3 segundos, con la caché vacía ([en el dispositivo](#en-el-dispositivo)).
 
 [Read in English](README.md)
@@ -100,13 +100,13 @@ portátil de 16 GB.
 
 | Región | Nodos del grafo | `.gmap` | Construcción | Ruta mediana | Nodos asentados (mediana) | A* asienta | KB leídos por consulta |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Bogotá | 91 mil | 15 MB | 2 s | 15 km | 272 | 29 mil | 1.072 |
-| Londres | 419 mil | 62 MB | 10 s | 31 km | 389 | 83 mil | 2.048 |
-| Tokio | 236 mil | 42 MB | 6 s | 17 km | 462 | 81 mil | 2.116 |
-| Colombia | 1,27 M | 288 MB | 59 s | 610 km | 294 | 439 mil | 2.952 |
-| España | 3,41 M | 632 MB | 2 min | 563 km | 420 | 545 mil | 3.580 |
-| California | 2,94 M | 523 MB | 85 s | 408 km | 566 | 1,09 M | 4.480 |
-| Brasil | 10,2 M | 2,5 GB | 7 min | 1.674 km | 693 | 3,59 M | 8.036 |
+| Bogotá | 91 mil | 15 MB | 5 s | 15 km | 272 | 29 mil | 1.072 |
+| Londres | 419 mil | 62 MB | 11 s | 31 km | 389 | 83 mil | 2.040 |
+| Tokio | 236 mil | 42 MB | 7 s | 17 km | 462 | 81 mil | 2.112 |
+| Colombia | 1,27 M | 263 MB | 54 s | 610 km | 294 | 439 mil | 2.972 |
+| España | 3,41 M | 603 MB | 2 min | 563 km | 420 | 545 mil | 3.560 |
+| California | 2,94 M | 505 MB | 95 s | 408 km | 566 | 1,09 M | 4.496 |
+| Brasil | 10,2 M | 2,2 GB | 8 min | 1.674 km | 693 | 3,59 M | 8.020 |
 
 Los benchmarks también incluyen Ciudad de México, Lima, Buenos Aires, Santiago, Washington DC, Ottawa, Toronto,
 Nueva York, Madrid, Barcelona, París, Berlín, Canadá, Texas, el estado de Nueva York y Colombia por departamento.
@@ -145,9 +145,9 @@ Lo que hizo la diferencia:
 
 ## Límites
 
-- El formato `.gmap` direcciona 4 GiB y unos 164° de longitud: Brasil cabe (2,5 GB); Estados Unidos completo
+- El formato `.gmap` direcciona 4 GiB y unos 164° de longitud: Brasil cabe (2,2 GB); Estados Unidos completo
   no, así que se construye por estados.
-- Construir necesita al menos unos 1,5 GB de RAM, y 8 GB para Brasil.
+- Construir necesita al menos unos 1,5 GB de RAM, y unos 9 GB para Brasil.
 - Se aplican las restricciones de giro con un nodo como `via` (en Colombia, 5.913 de 7.125); las que tienen una
   vía como `via` y las que dependen del horario, no. Las velocidades salen de `maxspeed` o de un valor por defecto
   según el tipo de vía (sin tráfico).

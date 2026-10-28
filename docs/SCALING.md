@@ -156,25 +156,25 @@ route unpacked from the hierarchy's shortcuts must add up to that cost edge by e
 | Region | Routes checked | Same cost | Pairs without a route (skipped) | Time |
 |---|---:|---:|---:|---:|
 | Bogotá | 100 | all | 0 | 3 s |
-| Mexico City | 100 | all | 1 | 5 s |
+| Mexico City | 100 | all | 1 | 4 s |
 | Lima | 100 | all | 3 | 6 s |
 | Buenos Aires | 100 | all | 1 | 6 s |
 | Santiago | 100 | all | 4 | 5 s |
 | Washington DC | 100 | all | 15 | 3 s |
 | Ottawa | 100 | all | 5 | 1 s |
 | Toronto | 100 | all | 2 | 3 s |
-| New York | 100 | all | 8 | 7 s |
+| New York | 100 | all | 8 | 8 s |
 | Madrid | 100 | all | 14 | 3 s |
 | Barcelona | 100 | all | 6 | 2 s |
 | Paris | 100 | all | 10 | 7 s |
 | London | 100 | all | 8 | 12 s |
 | Berlin | 100 | all | 6 | 6 s |
-| Tokyo | 100 | all | 3 | 9 s |
+| Tokyo | 100 | all | 3 | 8 s |
 | Colombia | 100 | all | 4 | 43 s |
-| Spain | 100 | all | 10 | 67 s |
-| Brazil | 100 | all | 1 | 410 s |
+| Spain | 100 | all | 10 | 68 s |
+| Brazil | 100 | all | 1 | 391 s |
 | Canada | 100 | all | 11 | 97 s |
-| California | 100 | all | 10 | 99 s |
+| California | 100 | all | 10 | 98 s |
 | Texas | 100 | all | 8 | 81 s |
 | New York State | 100 | all | 7 | 35 s |
 | **Total** | **2,200** | **all** | | |
@@ -190,13 +190,13 @@ For the largest regions (from the benchmark results):
 <!-- TIMING -->
 | Region | Road nodes in OSM | Load | Graph | CH | Total | Peak RAM |
 |---|---:|---:|---:|---:|---:|---:|
-| New York State | 6.6 M | 21 s | 5 s | 8 s | 36 s | 2.5 GB |
-| Colombia | 9.7 M | 27 s | 9 s | 21 s | 59 s | 3.1 GB |
-| California | 14.1 M | 50 s | 13 s | 19 s | 85 s | 4.8 GB |
-| Texas | 15.8 M | 52 s | 15 s | 26 s | 97 s | 6.0 GB |
-| Canada | 18.1 M | 72 s | 18 s | 19 s | 112 s | 6.8 GB |
-| Spain | 19.8 M | 70 s | 18 s | 40 s | 133 s | 5.4 GB |
-| Brazil | 78.3 M | 218 s | 90 s | 118 s | 443 s | 7.4 GB |
+| New York State | 6.6 M | 24 s | 5 s | 8 s | 40 s | 2.5 GB |
+| Colombia | 9.7 M | 31 s | 9 s | 11 s | 54 s | 3.5 GB |
+| California | 14.1 M | 55 s | 14 s | 18 s | 95 s | 5.0 GB |
+| Texas | 15.8 M | 55 s | 16 s | 25 s | 107 s | 5.9 GB |
+| Canada | 18.1 M | 101 s | 17 s | 18 s | 147 s | 5.5 GB |
+| Spain | 19.8 M | 73 s | 18 s | 27 s | 129 s | 6.2 GB |
+| Brazil | 78.3 M | 234 s | 77 s | 114 s | 457 s | 9.3 GB |
 <!-- /TIMING -->
 
 "Load" is the two passes over the extract; Brazil has 78 million road nodes, which Python still touches one
@@ -205,12 +205,13 @@ by one in the node pass. "Graph" is the numpy work plus Douglas-Peucker; "CH" is
 ## Limits
 
 - **Format:** `.gmap` uses 32-bit offsets and a 16-bit grid, so a map must stay under 4 GiB and about 164°
-  of longitude. Brazil is 2.5 GB. The whole United States would be about 8 GB and crosses the 180th
+  of longitude. Brazil is 2.2 GB. The whole United States would be about 8 GB and crosses the 180th
   meridian (Alaska), so it is built per state. The writer refuses maps beyond these limits instead of
   producing a corrupt file.
-- **Memory:** the fixed ~1.5 GB of the id filter, plus what grows with the road network: 2.8 GB in total for
-  Colombia, 5.0 GB for Spain, 6.2 GB for Canada, 8.0 GB for Brazil (78 million road nodes). The whole United
-  States would not fit in 16 GB.
+- **Memory:** the fixed ~1.5 GB of the id filter, plus what grows with the road network: 3.5 GB in total for
+  Colombia, 6.2 GB for Spain, 5.5 GB for Canada, 9.3 GB for Brazil (78 million road nodes). These are the peaks
+  macOS reports, which vary by up to ~0.5 GB from one run to the next (and by more under memory pressure). The
+  whole United States would not fit in 16 GB.
 - **Spatial grid:** it used to list each segment in every cell of its bounding box, which inflated it where
   roads are long (36 % of the Canada map). It now lists only the cells a segment crosses, without changing the
   format: the grid of Canada went from 275 to 86 MB (the map from 768 to 579 MB), Colombia's from 44 to 20 MB,

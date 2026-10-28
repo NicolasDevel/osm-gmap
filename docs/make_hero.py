@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Renders docs/img/hero.png: a country's whole road graph with a long route, and three maneuver screens.
 
-    python docs/make_hero.py out/colombia.gmap --from 4.6097,-74.0817 --to 10.3910,-75.4794 --device-seconds 3.4
+    python docs/make_hero.py out/colombia --from 4.6097,-74.0817 --to 10.3910,-75.4794 --device-seconds 3.4
 
 --device-seconds is the time measured on the device for this route (it cannot be computed here).
 """
