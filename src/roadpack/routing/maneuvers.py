@@ -84,24 +84,33 @@ def _classify(angle):
     return "uturn", side
 
 
+def _same_road(gmap, a, b):
+    """The same exit of a junction: an edge and its copy (turn restrictions) share geometry, length and ends."""
+    o = gmap.original
+    return a == b or (gmap.geom[a] == gmap.geom[b] and gmap.length[a] == gmap.length[b]
+                      and o(gmap.target[a]) == o(gmap.target[b]) and o(gmap.source[a]) == o(gmap.source[b]))
+
+
 def maneuvers(gmap: Gmap, path):
     """Maneuvers of a route given as a list of edges, from "depart" to "arrive"."""
-    result = [Maneuver("depart", "", 0, gmap.source[path[0]], 0, 0, gmap.name(path[0]))]
+    result = [Maneuver("depart", "", 0, gmap.original(gmap.source[path[0]]), 0, 0, gmap.name(path[0]))]
     at = 0.0
     i = 0
     while i < len(path) - 1:
         e_in, e_out = path[i], path[i + 1]
         at += gmap.length[e_in]
-        node = gmap.target[e_in]
-        came_from = gmap.source[e_in]
-        options = [e for e in gmap.out_edges(node) if gmap.target[e] != came_from]
+        node = gmap.original(gmap.target[e_in])
+        came_from = gmap.original(gmap.source[e_in])
+        # Exits of the junction itself, not of the copy the route goes through (turn restrictions): a forbidden
+        # exit is still a street the rider sees.
+        options = [e for e in gmap.out_edges(node) if gmap.original(gmap.target[e]) != came_from]
         in_b = arriving_bearing(gmap, e_in)
 
         # Entering a roundabout: a single instruction with the exit number.
         if gmap.is_roundabout(e_out) and not gmap.is_roundabout(e_in):
             exits, j = 0, i + 1
             while j < len(path) - 1 and gmap.is_roundabout(path[j]):
-                n = gmap.target[path[j]]
+                n = gmap.original(gmap.target[path[j]])
                 if any(not gmap.is_roundabout(e) for e in gmap.out_edges(n)):
                     exits += 1
                 j += 1
@@ -120,7 +129,7 @@ def maneuvers(gmap: Gmap, path):
             if kind == "straight" and not same_road:
                 # A fork: if another exit also goes almost straight, say which side to keep.
                 # Going straight along the same road (even with side carriageways leaving) needs no instruction.
-                rivals = [turn_angle(in_b, leaving_bearing(gmap, e)) for e in options if e != e_out]
+                rivals = [turn_angle(in_b, leaving_bearing(gmap, e)) for e in options if not _same_road(gmap, e, e_out)]
                 close = [r for r in rivals if abs(r) < SLIGHT_DEG]
                 if close:
                     kind, side = "slight", "right" if angle > min(close, key=abs) else "left"
@@ -129,5 +138,5 @@ def maneuvers(gmap: Gmap, path):
         i += 1
 
     at += gmap.length[path[-1]]
-    result.append(Maneuver("arrive", "", 0, gmap.target[path[-1]], len(path), at, ""))
+    result.append(Maneuver("arrive", "", 0, gmap.original(gmap.target[path[-1]]), len(path), at, ""))
     return result

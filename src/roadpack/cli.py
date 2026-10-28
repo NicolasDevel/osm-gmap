@@ -58,7 +58,8 @@ def cmd_build(args):
 
     bbox = args.bbox or (REGIONS[args.region] if args.region else WHOLE_WORLD)
     chunk_dir = None if args.no_chunks else (args.chunk_dir or args.output.with_suffix(""))
-    stats = build(args.pbf, bbox, PROFILES[args.profile], args.output, chunk_dir)
+    stats = build(args.pbf, bbox, PROFILES[args.profile], args.output, chunk_dir,
+                  restrictions=not args.no_restrictions)
 
     s = stats["sections"]
     print(f"\nWrote {args.output} ({_mb(s['total'])}) in {stats['total_seconds']:.0f} s")
@@ -66,9 +67,12 @@ def cmd_build(args):
     print(f"  graph: {stats['nodes']:,} nodes ({stats['nodes'] / stats['osm_nodes']:.0%} of the OSM nodes), "
           f"{stats['edges']:,} directed edges")
     print(f"  shape: {stats['shape_points_kept']:,} of {stats['shape_points']:,} points between nodes kept")
+    if stats.get("restrictions"):
+        print(f"  turn restrictions: {stats['restrictions_applied']:,} of {stats['restrictions']:,} applied, "
+              f"{stats['node_copies']:,} junction copies")
     print("  sections:")
-    _print_sections({k: s[k] for k in ("nodes", "edges", "grid", "geometry", "names", "ch_forward", "ch_backward")},
-                    s["total"])
+    _print_sections({k: s[k] for k in ("nodes", "edges", "grid", "geometry", "names", "ch_forward", "ch_backward",
+                                       "copies")}, s["total"])
     if chunk_dir is not None:
         print(f"  SD card: {chunk_dir}/ ({stats['chunks']} chunks) -> copy it to /maps/{chunk_dir.name}/")
     if args.stats_json:
@@ -82,23 +86,26 @@ def cmd_info(args):
     sections = g.section_sizes()
     total = len(g.data)
     classes = Counter(f & 0x0F for f in g.flags)
-    km = sum(g.length) / 1000
+    km = sum(length for length, src in zip(g.length, g.source) if not g.is_copy(src)) / 1000  # copies: same road
     if args.json:
         print(json.dumps({
             "nodes": g.node_count, "edges": g.edge_count,
             "bounds": [g.min_lat, g.min_lon, g.max_lat, g.max_lon],
             "grid": {"cell_deg": g.cell, "cols": g.cols, "rows": g.rows, "non_empty": len(g.cell_ids)},
             "ch_arcs": {"forward": g.ch_fwd.arc_count, "backward": g.ch_bwd.arc_count},
-            "directed_km": km, "sections": sections, "size": total,
+            "directed_km": km, "sections": sections, "size": total, "version": g.version,
+            "junction_copies": g.copy_count,
             "edges_by_class": {ROAD_CLASSES[c]: n for c, n in sorted(classes.items())},
         }, indent=2))
         return
-    print(f"{args.gmap}: .gmap v2, {_mb(total)}")
+    print(f"{args.gmap}: .gmap v{g.version}, {_mb(total)}")
     print(f"  {g.node_count:,} nodes, {g.edge_count:,} directed edges ({km:,.0f} km), "
           f"{total / g.node_count:.0f} bytes per node in total")
     print(f"  bounds: {g.min_lat:.4f},{g.min_lon:.4f} – {g.max_lat:.4f},{g.max_lon:.4f}")
     print(f"  grid: {g.cols} × {g.rows} cells of {g.cell:g}°, {len(g.cell_ids):,} non-empty")
     print(f"  contraction hierarchy: {g.ch_fwd.arc_count:,} forward + {g.ch_bwd.arc_count:,} backward arcs")
+    if g.copy_count:
+        print(f"  turn restrictions: {g.copy_count:,} junction copies")
     print("  sections:")
     _print_sections({k: v for k, v in sections.items() if k != "header"}, total)
     print("  edges by road class:")
@@ -196,6 +203,7 @@ def main(argv=None):
                    help="vehicle whose access and oneway rules apply (default: motorcycle)")
     b.add_argument("--chunk-dir", type=Path, help="where to write the SD card chunks (default: output without .gmap)")
     b.add_argument("--no-chunks", action="store_true", help="do not split the file into SD card chunks")
+    b.add_argument("--no-restrictions", action="store_true", help="ignore OSM turn restrictions")
     b.add_argument("--stats-json", type=Path, metavar="FILE", help="also write the build statistics as JSON")
     b.set_defaults(func=cmd_build)
 

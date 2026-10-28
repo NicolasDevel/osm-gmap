@@ -9,7 +9,8 @@ import numpy as np
 
 from ..geo import local_xy
 from .chunks import join_chunks
-from .spec import CLASS_MASK, FLAG_GEOM_REVERSED, FLAG_ROUNDABOUT, GEOM_HEADER, HEADER, MAGIC, NONE, POINT, SCALE, VERSION
+from .spec import (CLASS_MASK, COPY, FLAG_GEOM_REVERSED, FLAG_ROUNDABOUT, GEOM_HEADER, HEADER, HEADER_V2, MAGIC, NONE,
+                   POINT, READ_VERSIONS, SCALE)
 
 NODE_DTYPE = np.dtype([("lat", "<i4"), ("lon", "<i4"), ("first_edge", "<u4")])
 EDGE_DTYPE = np.dtype([
@@ -48,14 +49,16 @@ class Gmap:
     def __init__(self, path):
         path = Path(path)
         self.data = join_chunks(path) if path.is_dir() else path.read_bytes()
-        if len(self.data) < HEADER.size:
-            raise ValueError(f"{path} is not a valid .gmap v{VERSION}")
-        (magic, version, _, self.node_count, self.edge_count,
+        invalid = ValueError(f"{path} is not a valid .gmap (versions {', '.join(map(str, READ_VERSIONS))})")
+        if len(self.data) < HEADER_V2.size:
+            raise invalid
+        (magic, self.version, _, self.node_count, self.edge_count,
          min_lat, min_lon, max_lat, max_lon, cell, self.cols, self.rows,
          self.nodes_off, self.edges_off, self.grid_off, self.geom_off, self.names_off, self.ch_fwd_off,
-         self.ch_bwd_off, file_size) = HEADER.unpack_from(self.data)
-        if magic != MAGIC or version != VERSION or file_size != len(self.data):
-            raise ValueError(f"{path} is not a valid .gmap v{VERSION}")
+         self.ch_bwd_off, file_size) = HEADER_V2.unpack_from(self.data)
+        if magic != MAGIC or self.version not in READ_VERSIONS or file_size != len(self.data):
+            raise invalid
+        self.copies_off, copy_count = HEADER.unpack_from(self.data)[-2:] if self.version >= 3 else (file_size, 0)
         self.min_lat, self.min_lon = min_lat / SCALE, min_lon / SCALE
         self.max_lat, self.max_lon = max_lat / SCALE, max_lon / SCALE
         self.cell = cell / SCALE
@@ -88,13 +91,37 @@ class Gmap:
         self.ch_fwd = ChSide(self.data, self.ch_fwd_off, self.node_count)
         self.ch_bwd = ChSide(self.data, self.ch_bwd_off, self.node_count)
 
+        # Junction copies made by turn restrictions: original of every node (itself if it is not a copy).
+        copies = np.frombuffer(self.data, "<u4", 2 * copy_count, self.copies_off).reshape(-1, 2)
+        assert COPY.size == 8
+        self.copy_count = copy_count
+        original = np.arange(self.node_count, dtype=np.int64)
+        original[copies[:, 0]] = copies[:, 1]
+        self._original = _column(original)
+
     def section_sizes(self):
         """Bytes used by each section of the file."""
         offs = [("header", 0), ("nodes", self.nodes_off), ("edges", self.edges_off), ("grid", self.grid_off),
                 ("geometry", self.geom_off), ("names", self.names_off), ("ch_forward", self.ch_fwd_off),
-                ("ch_backward", self.ch_bwd_off)]
+                ("ch_backward", self.ch_bwd_off), ("copies", self.copies_off)]
         ends = [o for _, o in offs[1:]] + [len(self.data)]
         return {name: end - off for (name, off), end in zip(offs, ends)}
+
+    def original(self, node):
+        """The junction a node stands for: itself, or the node it is a copy of (turn restrictions)."""
+        return self._original[node]
+
+    def is_copy(self, node):
+        return self._original[node] != node
+
+    def copies_of(self, node):
+        """Copies of a junction: they follow it in node order."""
+        out = []
+        n = node + 1
+        while n < self.node_count and self._original[n] == node:
+            out.append(n)
+            n += 1
+        return out
 
     def point(self, node):
         return self.lat[node], self.lon[node]
@@ -158,7 +185,8 @@ class Gmap:
     def nearest_node(self, lat, lon):
         """Closest node to a position, searching the neighbouring cells of the spatial grid."""
         for radius in (1, 2, 4, 8):
-            candidates = {n for e in self.edges_near(lat, lon, radius) for n in (self.source[e], self.target[e])}
+            candidates = {self.original(n) for e in self.edges_near(lat, lon, radius)
+                          for n in (self.source[e], self.target[e])}
             if candidates:
                 return min(candidates, key=lambda n: math.hypot(*local_xy((lat, lon), self.point(n))))
         raise ValueError(f"no roads near {lat}, {lon}")

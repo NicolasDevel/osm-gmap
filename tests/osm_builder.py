@@ -11,6 +11,7 @@ class OsmBuilder:
     def __init__(self):
         self.nodes = {}  # id -> (lat, lon)
         self.ways = []   # (id, node ids, tags)
+        self.relations = []  # (id, [(type, ref, role)], tags)
 
     def node(self, lat, lon):
         nid = len(self.nodes) + 1
@@ -23,6 +24,14 @@ class OsmBuilder:
         self.ways.append((wid, list(refs), {k.replace("__", ":"): str(v) for k, v in tags.items()}))
         return wid
 
+    def restriction(self, kind, from_way, via, to_way, via_type="node", **tags):
+        """A turn restriction relation: from way, via node (or way), to way."""
+        rid = len(self.relations) + 1
+        members = [("way", from_way, "from"), (via_type, via, "via"), ("way", to_way, "to")]
+        tags = {"type": "restriction", "restriction": kind, **{k.rstrip("_").replace("__", ":"): str(v) for k, v in tags.items()}}
+        self.relations.append((rid, members, {k: v for k, v in tags.items() if v != "None"}))
+        return rid
+
     def write(self, path):
         lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<osm version="0.6" generator="roadpack-tests">']
         for nid, (lat, lon) in self.nodes.items():
@@ -32,6 +41,11 @@ class OsmBuilder:
             lines += [f'    <nd ref="{r}"/>' for r in refs]
             lines += [f'    <tag k={quoteattr(k)} v={quoteattr(v)}/>' for k, v in tags.items()]
             lines.append("  </way>")
+        for rid, members, tags in self.relations:
+            lines.append(f'  <relation id="{rid}" version="1">')
+            lines += [f'    <member type="{t}" ref="{r}" role="{role}"/>' for t, r, role in members]
+            lines += [f'    <tag k={quoteattr(k)} v={quoteattr(v)}/>' for k, v in tags.items()]
+            lines.append("  </relation>")
         lines.append("</osm>")
         path.write_text("\n".join(lines) + "\n")
         return path

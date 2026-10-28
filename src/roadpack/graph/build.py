@@ -69,7 +69,11 @@ class RoadGraph:
     first_edge: np.ndarray    # edges of node n are first_edge[n]:first_edge[n + 1]
     bounds: tuple             # (min_lat, min_lon, max_lat, max_lon)
     grid: Grid
+    seg_way: np.ndarray = None  # way index (into the RoadNetwork) of each segment
     stats: dict = field(default_factory=dict)
+    # Turn restrictions (see restrictions.py): copies of junctions, sorted, and the original of each one.
+    copy_nodes: np.ndarray = field(default_factory=lambda: np.zeros(0, np.int64))
+    copy_original: np.ndarray = field(default_factory=lambda: np.zeros(0, np.int64))
 
     @property
     def node_count(self):
@@ -261,5 +265,5 @@ def build_graph(network: RoadNetwork, cell_deg=CELL_DEG, simplify_tolerance_m=SI
         seg_geom_start=seg_geom_start, geom_lat7=geom_lat7, geom_lon7=geom_lon7, names=network.names,
         source=source, target=target, segment=segment, length_m=length_m, weight=weight, speed=speed, flags=flags,
         first_edge=first_edge, bounds=(float(min_lat), float(min_lon), float(max_lat), float(max_lon)),
-        grid=grid, stats=stats,
+        grid=grid, seg_way=seg_way, stats=stats,
     )

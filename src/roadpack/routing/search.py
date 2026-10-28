@@ -13,8 +13,10 @@ MAX_SPEED_KMH = 120  # for the A* heuristic: never overestimates the remaining t
 
 
 def route_astar(gmap: Gmap, start: int, goal: int, stats=None):
-    """Fastest route with A* on the full graph. Returns (edges, cost in tenths of a second)."""
+    """Fastest route with A* on the full graph. Returns (edges, cost in tenths of a second).
+    The route may end at a copy of the goal (arriving along a way with turn restrictions there)."""
     goal_pt = gmap.point(goal)
+    goals = {goal, *gmap.copies_of(goal)}
 
     def h(n):  # tenths of a second at top speed
         return math.hypot(*local_xy(gmap.point(n), goal_pt)) * 36 / MAX_SPEED_KMH
@@ -28,7 +30,7 @@ def route_astar(gmap: Gmap, start: int, goal: int, stats=None):
         if cost > best.get(node, math.inf):
             continue
         settled += 1
-        if node == goal:
+        if node in goals:
             if stats is not None:
                 stats["settled"] = settled
             path = []
@@ -67,10 +69,12 @@ def _unpack(gmap, side, arc, out, reads=None):
 def route_ch(gmap: Gmap, start: int, goal: int, stats=None, reads=None):
     """Fastest route with the contraction hierarchy: bidirectional Dijkstra going only upwards.
     Returns (edges, cost in tenths of a second); ([], 0) if start == goal, (None, inf) if unreachable.
+    The backward search starts at the goal and at its copies (turn restrictions): the route may arrive at any.
     If `reads` is a list, the (file offset, size) of every hierarchy record the query touches is appended."""
-    dist = ({start: 0}, {goal: 0})
+    goals = [goal, *gmap.copies_of(goal)]
+    dist = ({start: 0}, {g: 0 for g in goals})
     pred = ({}, {})  # node -> arc it was reached through
-    heaps = ([(0, start)], [(0, goal)])
+    heaps = ([(0, start)], [(0, g) for g in goals])
     sides = (gmap.ch_fwd, gmap.ch_bwd)
     best, meet = math.inf, None
     settled = 0
@@ -112,7 +116,7 @@ def route_ch(gmap: Gmap, start: int, goal: int, stats=None, reads=None):
     for a in reversed(up):
         _unpack(gmap, "f", a, path, reads)
     n = meet
-    while n != goal:
+    while n not in goals:
         a = pred[1][n]
         _unpack(gmap, "b", a, path, reads)
         n = bisect.bisect_right(gmap.ch_bwd.first, a) - 1  # node that stores the backward arc (its head)

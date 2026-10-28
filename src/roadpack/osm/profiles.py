@@ -31,6 +31,24 @@ class Profile:
                 return value not in DENIED_ACCESS
         return True
 
+    def restriction(self, tags):
+        """Turn restriction that applies to the vehicle ("no_left_turn", "only_straight_on", ...), or None.
+
+        A vehicle-specific `restriction:<vehicle>` wins over `restriction`, which does not apply when `except`
+        names the vehicle. Time-dependent `restriction:conditional` is ignored.
+        """
+        vehicles = [k for k in self.access_keys if k != "access"]
+        for v in vehicles:
+            value = tags.get(f"restriction:{v}")
+            if value:
+                return value if value.startswith(("no_", "only_")) else None
+        value = tags.get("restriction")
+        if not value or not value.startswith(("no_", "only_")):
+            return None
+        if set(tags.get("except", "").split(";")) & set(vehicles):
+            return None
+        return value
+
     def oneway(self, tags, highway) -> int:
         """1 = only along the way's drawing direction, -1 = only against it, 0 = both directions."""
         value = tags.get(self.oneway_key) or tags.get("oneway")

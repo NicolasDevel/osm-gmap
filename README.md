@@ -75,7 +75,7 @@ The first build fetches [RoutingKit](https://github.com/RoutingKit/RoutingKit) a
 ```mermaid
 flowchart LR
     pbf[".osm.pbf"] --> load["Load<br/>highway ways, then their nodes<br/>(two passes, filtered in C++)"]
-    load --> graph["Graph<br/>split at intersections<br/>simplify shapes · Z-order<br/>spatial grid"]
+    load --> graph["Graph<br/>split at intersections<br/>simplify shapes · Z-order<br/>spatial grid<br/>turn restrictions"]
     graph --> ch["Contraction hierarchy<br/>(RoutingKit)"]
     ch --> gmap[".gmap<br/>+ 4 MiB chunks"]
     gmap --> sd["microSD"] --> mcu["Microcontroller<br/>bidirectional upward Dijkstra<br/>through a small page cache"]
@@ -83,9 +83,9 @@ flowchart LR
 
 ```
 ┌────────┬────────────┬──────────┬──────────────┬──────────┬───────┬────────────┬─────────────┐
-│ header │ nodes      │ edges    │ spatial grid │ geometry │ names │ CH forward │ CH backward │
-│ 72 B   │ 12 B × N+1 │ 28 B × E │ sparse       │ variable │ UTF-8 │            │             │
-└────────┴────────────┴──────────┴──────────────┴──────────┴───────┴────────────┴─────────────┘
+│ header │ nodes      │ edges    │ spatial grid │ geometry │ names │ CH forward │ CH backward │ copies   │
+│ 80 B   │ 12 B × N+1 │ 28 B × E │ sparse       │ variable │ UTF-8 │            │             │ 8 B × K  │
+└────────┴────────────┴──────────┴──────────────┴──────────┴───────┴────────────┴─────────────┴──────────┘
 ```
 
 A device answers a query by running Dijkstra from both ends, only ever going up in the hierarchy, then unpacking
@@ -139,10 +139,11 @@ What made the difference:
 
 ## Limits
 
-- The `.gmap` v2 format addresses 4 GiB and about 164° of longitude: Brazil fits (2.5 GB); the whole United
+- The `.gmap` format addresses 4 GiB and about 164° of longitude: Brazil fits (2.5 GB); the whole United
   States does not, so it is built per state.
 - Building needs at least about 1.5 GB of RAM, and 8 GB for Brazil.
-- No turn restrictions yet, and speeds come from `maxspeed` or a default per road class (no traffic).
+- Turn restrictions with a via node are applied (in Colombia, 5,913 of 7,125); those with a via way and the
+  time-dependent ones are not. Speeds come from `maxspeed` or a default per road class (no traffic).
 - The microcontroller side is specified in FORMAT.md and implemented in Python here; a portable C reader is
   planned.
 

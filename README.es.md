@@ -75,17 +75,17 @@ pequeño en `~/.cache/roadpack`: hacen falta `git` y un compilador de C++17.
 ```mermaid
 flowchart LR
     pbf[".osm.pbf"] --> load["Carga<br/>vías highway, luego sus nodos<br/>(dos pasadas, filtradas en C++)"]
-    load --> graph["Grafo<br/>partido en los cruces<br/>formas simplificadas · curva Z<br/>índice espacial"]
+    load --> graph["Grafo<br/>partido en los cruces<br/>formas simplificadas · curva Z<br/>índice espacial<br/>restricciones de giro"]
     graph --> ch["Jerarquía de contracción<br/>(RoutingKit)"]
     ch --> gmap[".gmap<br/>+ pedazos de 4 MiB"]
     gmap --> sd["microSD"] --> mcu["Microcontrolador<br/>Dijkstra bidireccional hacia arriba<br/>con una caché de páginas pequeña"]
 ```
 
 ```
-┌──────────┬────────────┬──────────┬─────────────────┬────────────┬─────────┬────────────┬─────────────┐
-│ cabecera │ nodos      │ aristas  │ índice espacial │ geometría  │ nombres │ CH forward │ CH backward │
-│ 72 B     │ 12 B × N+1 │ 28 B × E │ disperso        │ variable   │ UTF-8   │            │             │
-└──────────┴────────────┴──────────┴─────────────────┴────────────┴─────────┴────────────┴─────────────┘
+┌──────────┬────────────┬──────────┬─────────────────┬────────────┬─────────┬────────────┬─────────────┬─────────┐
+│ cabecera │ nodos      │ aristas  │ índice espacial │ geometría  │ nombres │ CH forward │ CH backward │ copias  │
+│ 80 B     │ 12 B × N+1 │ 28 B × E │ disperso        │ variable   │ UTF-8   │            │             │ 8 B × K │
+└──────────┴────────────┴──────────┴─────────────────┴────────────┴─────────┴────────────┴─────────────┴─────────┘
 ```
 
 El dispositivo responde una consulta corriendo Dijkstra desde los dos extremos, subiendo siempre en la
@@ -142,11 +142,12 @@ Lo que hizo la diferencia:
 
 ## Límites
 
-- El formato `.gmap` v2 direcciona 4 GiB y unos 164° de longitud: Brasil cabe (2,5 GB); Estados Unidos completo
+- El formato `.gmap` direcciona 4 GiB y unos 164° de longitud: Brasil cabe (2,5 GB); Estados Unidos completo
   no, así que se construye por estados.
 - Construir necesita al menos unos 1,5 GB de RAM, y 8 GB para Brasil.
-- Todavía no hay restricciones de giro, y las velocidades salen de `maxspeed` o de un valor por defecto según el
-  tipo de vía (sin tráfico).
+- Se aplican las restricciones de giro con un nodo como `via` (en Colombia, 5.913 de 7.125); las que tienen una
+  vía como `via` y las que dependen del horario, no. Las velocidades salen de `maxspeed` o de un valor por defecto
+  según el tipo de vía (sin tráfico).
 - El lado del microcontrolador está especificado en FORMAT.md e implementado aquí en Python; hay planeado un lector
   portable en C.
 

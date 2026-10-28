@@ -5,7 +5,7 @@ import numpy as np
 
 from ..arrays import first_occurrences, ranges
 from .reader import EDGE_DTYPE, NODE_DTYPE
-from .spec import HEADER, MAGIC, NONE, SCALE, VERSION
+from .spec import COPY, HEADER, MAGIC, NONE, SCALE, VERSION
 
 
 def _fixed(deg):
@@ -69,12 +69,17 @@ def write_gmap(graph, ch, path: Path) -> dict:
     ch_fwd_off = names_off + len(names_blob)
     ch_fwd_off += -ch_fwd_off % 4  # CH sections aligned to 4 bytes
     ch_bwd_off = ch_fwd_off + len(ch.forward)
-    file_size = ch_bwd_off + len(ch.backward)
+    copies = np.zeros((len(graph.copy_nodes), 2), "<u4")
+    copies[:, 0], copies[:, 1] = graph.copy_nodes, graph.copy_original
+    copies_blob = copies.tobytes()
+    assert len(copies_blob) == len(copies) * COPY.size
+    copies_off = ch_bwd_off + len(ch.backward)
+    file_size = copies_off + len(copies_blob)
     if file_size >= 1 << 32:
-        raise ValueError(f"the map is {file_size / 2**30:.1f} GiB; the .gmap v2 format is limited to 4 GiB "
+        raise ValueError(f"the map is {file_size / 2**30:.1f} GiB; the .gmap format is limited to 4 GiB "
                          "(build a smaller region)")
     if g.cols > 0xFFFF or g.rows > 0xFFFF:
-        raise ValueError(f"the region spans {g.cols} × {g.rows} grid cells; the .gmap v2 format allows 65535 "
+        raise ValueError(f"the region spans {g.cols} × {g.rows} grid cells; the .gmap format allows 65535 "
                          "per side (about 164° at the default cell size)")
     min_lat, min_lon, max_lat, max_lon = graph.bounds
     header = HEADER.pack(
@@ -82,6 +87,7 @@ def write_gmap(graph, ch, path: Path) -> dict:
         _fixed(min_lat), _fixed(min_lon), _fixed(max_lat), _fixed(max_lon),
         _fixed(g.cell_deg), g.cols, g.rows,
         nodes_off, edges_off, grid_off, geom_off, names_off, ch_fwd_off, ch_bwd_off, file_size,
+        copies_off, len(copies),
     )
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -91,10 +97,11 @@ def write_gmap(graph, ch, path: Path) -> dict:
         f.write(b"\0" * (ch_fwd_off - names_off - len(names_blob)))
         f.write(ch.forward)
         f.write(ch.backward)
+        f.write(copies_blob)
 
     return {
         "header": len(header), "nodes": len(nodes_blob), "edges": len(edges_blob), "grid": len(grid_blob),
         "geometry": len(geom_blob), "names": len(names_blob), "ch_forward": len(ch.forward),
-        "ch_backward": len(ch.backward), "total": file_size, "unique_names": len(used),
+        "ch_backward": len(ch.backward), "copies": len(copies_blob), "total": file_size, "unique_names": len(used),
         "grid_cells": len(g.cell_ids),
     }

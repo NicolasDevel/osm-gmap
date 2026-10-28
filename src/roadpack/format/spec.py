@@ -2,7 +2,8 @@
 import struct
 
 MAGIC = b"GMAP"
-VERSION = 2
+VERSION = 3
+READ_VERSIONS = (2, 3)  # v2 is v3 without turn restrictions
 
 # Coordinates are stored as integers: degrees × 1e7 (≈ 1.1 cm resolution), same as OSM.
 SCALE = 10_000_000
@@ -13,8 +14,14 @@ NONE = 0xFFFFFFFF
 # magic, version, header_size, node_count, edge_count,
 # min_lat, min_lon, max_lat, max_lon, cell_size, grid_cols, grid_rows,
 # nodes_off, edges_off, grid_off, geom_off, names_off, ch_fwd_off, ch_bwd_off, file_size
-HEADER = struct.Struct("<4sHHII4iIHH8I")
-assert HEADER.size == 72
+HEADER_V2 = struct.Struct("<4sHHII4iIHH8I")
+assert HEADER_V2.size == 72
+# v3 appends: copies_off, copy_count (junction copies made by turn restrictions; every v2 field stays in place).
+HEADER = struct.Struct("<4sHHII4iIHH10I")
+assert HEADER.size == 80
+
+# Junction copy: copy node, original node (copy_count records sorted by copy).
+COPY = struct.Struct("<II")
 
 # lat, lon, first_edge (there are node_count + 1 records: the last one is a sentinel)
 NODE = struct.Struct("<iiI")

@@ -1,4 +1,4 @@
-# The `.gmap` v2 format
+# The `.gmap` v3 format
 
 The road graph of a region, designed to be read from a microSD card with `seek` + `read`: no text parsing and
 **no need to load it in memory**. A device reads it in pages through a small cache. It carries a precomputed
@@ -8,11 +8,15 @@ Everything is **little-endian** (like the ESP32 and most ARM MCUs). Coordinates 
 (≈ 1.1 cm). `0xFFFFFFFF` means "none" in 32-bit references.
 
 ```
-┌────────┬────────────┬──────────┬──────────────┬──────────┬───────┬────────────┬─────────────┐
-│ header │ nodes      │ edges    │ spatial grid │ geometry │ names │ CH forward │ CH backward │
-│ 72 B   │ 12 B × N+1 │ 28 B × E │ sparse       │ variable │ UTF-8 │            │             │
-└────────┴────────────┴──────────┴──────────────┴──────────┴───────┴────────────┴─────────────┘
+┌────────┬────────────┬──────────┬──────────────┬──────────┬───────┬────────────┬─────────────┬──────────┐
+│ header │ nodes      │ edges    │ spatial grid │ geometry │ names │ CH forward │ CH backward │ copies   │
+│ 80 B   │ 12 B × N+1 │ 28 B × E │ sparse       │ variable │ UTF-8 │            │             │ 8 B × K  │
+└────────┴────────────┴──────────┴──────────────┴──────────┴───────┴────────────┴─────────────┴──────────┘
 ```
+
+**v3** adds OSM turn restrictions as junction copies (see [Turn restrictions](#turn-restrictions)): two header
+fields at the end and a table at the end of the file. Everything else is where v2 had it, so a v3 reader also
+reads v2 files (version 2, 72-byte header, no copies).
 
 Nodes are sorted along a **Z-order (Morton) curve** of their spatial grid cell: what is close on the map, in
 any direction, is close in the file. Edges, geometry and the CH follow the same order, so a device's page
@@ -27,13 +31,13 @@ Why: the Arduino ESP32 core ships FAT without *fast seek*, and seeking backwards
 MB walks the whole cluster chain (measured: ~12 ms per read). With 4 MiB chunks the seeks are short and few
 files are opened (each open costs ~17 ms on the device).
 
-## Header (72 bytes)
+## Header (80 bytes)
 
 | Offset | Type | Field | Notes |
 |---:|---|---|---|
 | 0 | char[4] | magic | `GMAP` |
-| 4 | u16 | version | `2` |
-| 6 | u16 | header_size | `72` |
+| 4 | u16 | version | `3` |
+| 6 | u16 | header_size | `80` |
 | 8 | u32 | node_count | N |
 | 12 | u32 | edge_count | E |
 | 16 | i32 ×4 | min_lat, min_lon, max_lat, max_lon | extent of the network; (min_lat, min_lon) is the grid origin |
@@ -48,10 +52,13 @@ files are opened (each open costs ~17 ms on the device).
 | 60 | u32 | ch_fwd_off | 4-byte aligned |
 | 64 | u32 | ch_bwd_off | |
 | 68 | u32 | file_size | to check the file is complete |
+| 72 | u32 | copies_off | junction copies (v3; in v2 there are none) |
+| 76 | u32 | copy_count | K |
 
 ## Nodes (12 bytes, N + 1 records)
 
-Each node is an **intersection or the end of a way**; the points along a street are not nodes.
+Each node is an **intersection or the end of a way**, or a **copy** of an intersection (turn restrictions); the
+points along a street are not nodes.
 
 | Offset | Type | Field |
 |---:|---|---|
@@ -151,3 +158,37 @@ CH keeps the Morton locality of the nodes):
 
 In Bogotá and Cundinamarca a query settles about **240 nodes per route** (at most ~400), against thousands for
 A* on the full graph, with exactly the same cost.
+
+## Turn restrictions
+
+OSM turn restrictions (`type=restriction` relations with a via node: `no_left_turn`, `only_straight_on`,
+`no_u_turn`, …) are applied by **splitting junctions**, so the graph stays node-based and the hierarchy and its
+query do not change:
+
+- At a junction with restrictions, an edge arriving along a restricted way is redirected to a **copy** of the
+  junction: same coordinates, and only the exits allowed from that way (copies of the original edges, with their
+  own records in the edge table). Arrivals with the same restrictions share a copy; other arrivals keep going to
+  the junction itself, which keeps every exit.
+- Copies come **right after their original** in node order (same page of the SD card), and their edges right after
+  the original's. The spatial grid lists only original edges.
+
+The copies table lists each copy and its original, sorted by copy:
+
+| Offset | Type | Field |
+|---:|---|---|
+| 0 | u32 | copy |
+| 4 | u32 | original |
+
+What a reader has to do with copies:
+
+- **Goal:** a route may arrive at the goal junction through any of its copies (arriving along a restricted way is
+  allowed: no turn is made). The backward search starts at the goal and at its copies (those are the nodes right
+  after the goal whose original is the goal).
+- **Maneuvers:** the streets of a junction are the exits of the **original**; a forbidden exit is still a street
+  the rider sees. Compare junctions by their original.
+- **Snapping a position to a node:** use the original.
+
+Not supported (left out when building, and counted): restrictions with a way as via, with several from/to members,
+and time-dependent ones (`restriction:conditional`). If a from or to way goes through the via node instead of
+ending there, which side is meant is ambiguous, and the restriction is skipped. `except=*` and
+`restriction:<vehicle>` follow the vehicle profile.

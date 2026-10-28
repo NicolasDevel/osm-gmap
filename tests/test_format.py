@@ -6,7 +6,7 @@ import pytest
 
 from roadpack.ch import build_graph_ch
 from roadpack.format import Gmap, join_chunks, write_chunks, write_gmap
-from roadpack.format.spec import HEADER, MAGIC, NONE, SCALE, VERSION
+from roadpack.format.spec import HEADER, HEADER_V2, MAGIC, NONE, SCALE, VERSION
 from roadpack.geo import local_xy
 from roadpack.graph import build_graph
 from roadpack.osm import PROFILES, load_roads
@@ -57,14 +57,32 @@ def test_header_and_sections(written):
     data = path.read_bytes()
     g = Gmap(path)
     magic, version, header_size = HEADER.unpack_from(data)[:3]
-    assert (magic, version, header_size) == (MAGIC, VERSION, 72)
+    assert (magic, version, header_size) == (MAGIC, VERSION, 80)
     assert sections["total"] == len(data)
     sizes = g.section_sizes()
     assert sum(sizes.values()) == len(data)
     assert g.ch_fwd_off % 4 == 0
     assert sizes["nodes"] == 12 * (g.node_count + 1) and sizes["edges"] == 28 * g.edge_count
-    assert data[g.ch_fwd_off:g.ch_bwd_off] == ch.forward and data[g.ch_bwd_off:] == ch.backward
+    assert data[g.ch_fwd_off:g.ch_bwd_off] == ch.forward and data[g.ch_bwd_off:g.copies_off] == ch.backward
+    assert g.copy_count == 0 and g.copies_off == len(data)  # no turn restrictions in this file
     assert g.ch_fwd.arc_count == ch.forward_arcs and g.ch_bwd.arc_count == ch.backward_arcs
+
+
+def test_reads_version_2(written, tmp_path):
+    """A v2 file is a v3 one without the two trailing header fields (and without junction copies)."""
+    _, _, path, _ = written
+    data = path.read_bytes()
+    fields = list(HEADER.unpack_from(data))
+    assert fields[-1] == 0  # no copies
+    v2 = fields[:20]
+    v2[1], v2[2] = 2, HEADER_V2.size
+    v2[12:20] = [off - (HEADER.size - HEADER_V2.size) for off in v2[12:20]]  # section offsets and file size
+    old = tmp_path / "v2.gmap"
+    old.write_bytes(HEADER_V2.pack(*v2) + data[HEADER.size:])
+    g, g3 = Gmap(old), Gmap(path)
+    assert g.version == 2 and g.copy_count == 0 and g.node_count == g3.node_count
+    assert g.polyline(5) == g3.polyline(5) and g.ch_bwd.arc_count == g3.ch_bwd.arc_count
+    assert [g.original(n) for n in range(g.node_count)] == list(range(g.node_count))
 
 
 def test_names_are_stored_once(written):
