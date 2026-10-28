@@ -8,38 +8,46 @@
     "date": "2026-10-16"
   },
   "build": {
-    "seconds": 3.648689031600952,
-    "peak_rss": 1945321472,
+    "seconds": 3.479351043701172,
+    "peak_rss": 1952907264,
     "osm_ways": 93014,
     "osm_nodes": 537561,
     "segments": 138373,
     "shape_points": 436187,
     "shape_points_kept": 112402,
-    "graph_seconds": 0.3872640132904053,
-    "nodes": 101374,
-    "edges": 188992,
-    "ch_forward_arcs": 193509,
-    "ch_backward_arcs": 193824,
+    "graph_seconds": 0.36600589752197266,
+    "restrictions": 6598,
+    "restrictions_applied": 5982,
+    "restrictions_not_found": 525,
+    "restrictions_ambiguous": 1,
+    "restrictions_unsupported": 90,
+    "node_copies": 5600,
+    "edge_copies": 6999,
+    "nodes": 106974,
+    "edges": 195991,
+    "ch_forward_arcs": 202922,
+    "ch_backward_arcs": 198204,
     "sections": {
-      "header": 72,
-      "nodes": 1216500,
-      "edges": 5291776,
+      "header": 80,
+      "nodes": 1283700,
+      "edges": 5487748,
       "grid": 1009884,
       "geometry": 1066836,
       "names": 342848,
-      "ch_forward": 3501648,
-      "ch_backward": 3506688,
-      "total": 15936252,
+      "ch_forward": 3674656,
+      "ch_backward": 3599168,
+      "copies": 44800,
+      "total": 16509720,
       "unique_names": 15072,
       "grid_cells": 18693
     },
-    "load_seconds": 2.362873077392578,
-    "ch_seconds": 0.7930407524108887,
-    "total_seconds": 3.5694570541381836
+    "load_seconds": 2.266516923904419,
+    "ch_seconds": 0.6868090629577637,
+    "total_seconds": 3.4086737632751465
   },
   "map": {
-    "nodes": 101374,
-    "edges": 188992,
+    "nodes": 106974,
+    "edges": 195991,
     "bounds": [
       41.2304959,
       1.7604692,
@@ -53,66 +61,69 @@
       "non_empty": 18693
     },
     "ch_arcs": {
-      "forward": 193509,
-      "backward": 193824
+      "forward": 202922,
+      "backward": 198204
     },
     "directed_km": 17020.025,
     "sections": {
-      "header": 72,
-      "nodes": 1216500,
-      "edges": 5291776,
+      "header": 80,
+      "nodes": 1283700,
+      "edges": 5487748,
       "grid": 1009884,
       "geometry": 1066836,
       "names": 342848,
-      "ch_forward": 3501648,
-      "ch_backward": 3506688
+      "ch_forward": 3674656,
+      "ch_backward": 3599168,
+      "copies": 44800
     },
-    "size": 15936252,
+    "size": 16509720,
+    "version": 3,
+    "junction_copies": 5600,
     "edges_by_class": {
-      "motorway": 4100,
-      "trunk": 2826,
-      "primary": 5038,
-      "secondary": 11418,
-      "tertiary": 23505,
-      "unclassified": 6112,
-      "residential": 107786,
-      "service": 28207
+      "motorway": 4134,
+      "trunk": 2972,
+      "primary": 5890,
+      "secondary": 13057,
+      "tertiary": 25367,
+      "unclassified": 6327,
+      "residential": 109818,
+      "service": 28426
     }
   },
   "routes": {
-    "routes": 190,
-    "unreachable": 10,
+    "routes": 194,
+    "unreachable": 6,
     "route_km": {
-      "median": 27.465,
-      "p95": 50.468,
-      "max": 71.295
+      "median": 25.831,
+      "p95": 47.726,
+      "max": 66.054
     },
     "settled_nodes": {
-      "median": 194,
-      "p95": 268,
-      "max": 322
+      "median": 219,
+      "p95": 337,
+      "max": 378
     },
     "query_kb_read": {
-      "median": 824.0,
-      "p95": 1208.0,
-      "max": 1380.0
+      "median": 912.0,
+      "p95": 1324.0,
+      "max": 1528.0
     },
     "route_kb_read": {
-      "median": 1044.0,
-      "p95": 1708.0,
-      "max": 1832.0
+      "median": 1136.0,
+      "p95": 1712.0,
+      "max": 1948.0
     },
     "python_ms": {
-      "median": 0.3392079997865949,
-      "p95": 0.4805839998880401,
-      "max": 0.6155830005809548
+      "median": 0.3436250044615008,
+      "p95": 0.5179170038900338,
+      "max": 0.5930000043008476
     },
     "astar_checked": 5,
     "astar_mismatches": 0,
-    "astar_settled_mean": 35980.6,
+    "astar_settled_mean": 9289.0,
     "page_size": 4096,
-    "reader_peak_rss": 81674240
+    "reader_peak_rss": 69861376
   },
   "machine": "arm64 Darwin, 10 cores",
-  "measured": "2026-10-22"
+  "measured": "2026-10-28"
 }

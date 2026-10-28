@@ -3,25 +3,25 @@
     "label": "Bogot\u00e1",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 2,
+    "unreachable_skipped": 0,
     "seed": 2,
-    "seconds": 3.2820889949798584
+    "seconds": 2.922736883163452
   },
   "mexico-city": {
     "label": "Mexico City",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 6,
+    "unreachable_skipped": 1,
     "seed": 2,
-    "seconds": 4.593218088150024
+    "seconds": 4.544507741928101
   },
   "lima": {
     "label": "Lima",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 5,
+    "unreachable_skipped": 3,
     "seed": 2,
-    "seconds": 6.107074975967407
+    "seconds": 5.897702932357788
   },
   "buenos-aires": {
     "label": "Buenos Aires",
@@ -29,79 +29,79 @@
     "mismatches": 0,
     "unreachable_skipped": 1,
     "seed": 2,
-    "seconds": 6.54803729057312
+    "seconds": 5.747614145278931
   },
   "santiago": {
     "label": "Santiago",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 3,
+    "unreachable_skipped": 4,
     "seed": 2,
-    "seconds": 5.193234920501709
+    "seconds": 5.201917886734009
   },
   "washington-dc": {
     "label": "Washington DC",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 3,
+    "unreachable_skipped": 15,
     "seed": 2,
-    "seconds": 3.7246510982513428
+    "seconds": 3.1567461490631104
   },
   "ottawa": {
     "label": "Ottawa",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 4,
+    "unreachable_skipped": 5,
     "seed": 2,
-    "seconds": 1.2173988819122314
+    "seconds": 1.3057289123535156
   },
   "toronto": {
     "label": "Toronto",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 5,
+    "unreachable_skipped": 2,
     "seed": 2,
-    "seconds": 3.8650500774383545
+    "seconds": 2.9845569133758545
   },
   "new-york": {
     "label": "New York",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 2,
+    "unreachable_skipped": 8,
     "seed": 2,
-    "seconds": 7.4206061363220215
+    "seconds": 7.471608877182007
   },
   "madrid": {
     "label": "Madrid",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 6,
+    "unreachable_skipped": 14,
     "seed": 2,
-    "seconds": 3.5353052616119385
+    "seconds": 3.106045961380005
   },
   "barcelona": {
     "label": "Barcelona",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 2,
+    "unreachable_skipped": 6,
     "seed": 2,
-    "seconds": 2.3958218097686768
+    "seconds": 2.1983909606933594
   },
   "paris": {
     "label": "Paris",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 7,
+    "unreachable_skipped": 10,
     "seed": 2,
-    "seconds": 6.580060005187988
+    "seconds": 7.437680959701538
   },
   "london": {
     "label": "London",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 7,
+    "unreachable_skipped": 8,
     "seed": 2,
-    "seconds": 12.024280071258545
+    "seconds": 11.839800834655762
   },
   "berlin": {
     "label": "Berlin",
@@ -109,15 +109,15 @@
     "mismatches": 0,
     "unreachable_skipped": 6,
     "seed": 2,
-    "seconds": 6.00235390663147
+    "seconds": 5.898895025253296
   },
   "tokyo": {
     "label": "Tokyo",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 1,
+    "unreachable_skipped": 3,
     "seed": 2,
-    "seconds": 7.799373626708984
+    "seconds": 8.519968032836914
   },
   "colombia": {
     "label": "Colombia",
@@ -125,23 +125,23 @@
     "mismatches": 0,
     "unreachable_skipped": 4,
     "seed": 2,
-    "seconds": 45.450276136398315
+    "seconds": 42.638442039489746
   },
   "spain": {
     "label": "Spain",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 7,
+    "unreachable_skipped": 10,
     "seed": 2,
-    "seconds": 54.334556102752686
+    "seconds": 67.48322701454163
   },
   "brazil": {
     "label": "Brazil",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 4,
+    "unreachable_skipped": 1,
     "seed": 2,
-    "seconds": 341.97462916374207
+    "seconds": 409.91645312309265
   },
   "canada": {
     "label": "Canada",
@@ -149,15 +149,15 @@
     "mismatches": 0,
     "unreachable_skipped": 11,
     "seed": 2,
-    "seconds": 94.47402596473694
+    "seconds": 97.36306190490723
   },
   "california": {
     "label": "California",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 3,
+    "unreachable_skipped": 10,
     "seed": 2,
-    "seconds": 86.38061904907227
+    "seconds": 98.88617205619812
   },
   "texas": {
     "label": "Texas",
@@ -165,14 +165,14 @@
     "mismatches": 0,
     "unreachable_skipped": 8,
     "seed": 2,
-    "seconds": 80.3526120185852
+    "seconds": 80.56212711334229
   },
   "new-york-state": {
     "label": "New York State",
     "routes": 100,
     "mismatches": 0,
-    "unreachable_skipped": 3,
+    "unreachable_skipped": 7,
     "seed": 2,
-    "seconds": 35.599360704422
+    "seconds": 35.40099596977234
   }
 }

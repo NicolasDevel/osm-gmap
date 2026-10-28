@@ -151,28 +151,28 @@ route unpacked from the hierarchy's shortcuts must add up to that cost edge by e
 <!-- VALIDATION -->
 | Region | Routes checked | Same cost | Pairs without a route (skipped) | Time |
 |---|---:|---:|---:|---:|
-| Bogotá | 100 | all | 2 | 3 s |
-| Mexico City | 100 | all | 6 | 5 s |
-| Lima | 100 | all | 5 | 6 s |
-| Buenos Aires | 100 | all | 1 | 7 s |
-| Santiago | 100 | all | 3 | 5 s |
-| Washington DC | 100 | all | 3 | 4 s |
-| Ottawa | 100 | all | 4 | 1 s |
-| Toronto | 100 | all | 5 | 4 s |
-| New York | 100 | all | 2 | 7 s |
-| Madrid | 100 | all | 6 | 4 s |
-| Barcelona | 100 | all | 2 | 2 s |
-| Paris | 100 | all | 7 | 7 s |
-| London | 100 | all | 7 | 12 s |
+| Bogotá | 100 | all | 0 | 3 s |
+| Mexico City | 100 | all | 1 | 5 s |
+| Lima | 100 | all | 3 | 6 s |
+| Buenos Aires | 100 | all | 1 | 6 s |
+| Santiago | 100 | all | 4 | 5 s |
+| Washington DC | 100 | all | 15 | 3 s |
+| Ottawa | 100 | all | 5 | 1 s |
+| Toronto | 100 | all | 2 | 3 s |
+| New York | 100 | all | 8 | 7 s |
+| Madrid | 100 | all | 14 | 3 s |
+| Barcelona | 100 | all | 6 | 2 s |
+| Paris | 100 | all | 10 | 7 s |
+| London | 100 | all | 8 | 12 s |
 | Berlin | 100 | all | 6 | 6 s |
-| Tokyo | 100 | all | 1 | 8 s |
-| Colombia | 100 | all | 4 | 45 s |
-| Spain | 100 | all | 7 | 54 s |
-| Brazil | 100 | all | 4 | 342 s |
-| Canada | 100 | all | 11 | 94 s |
-| California | 100 | all | 3 | 86 s |
-| Texas | 100 | all | 8 | 80 s |
-| New York State | 100 | all | 3 | 36 s |
+| Tokyo | 100 | all | 3 | 9 s |
+| Colombia | 100 | all | 4 | 43 s |
+| Spain | 100 | all | 10 | 67 s |
+| Brazil | 100 | all | 1 | 410 s |
+| Canada | 100 | all | 11 | 97 s |
+| California | 100 | all | 10 | 99 s |
+| Texas | 100 | all | 8 | 81 s |
+| New York State | 100 | all | 7 | 35 s |
 | **Total** | **2,200** | **all** | | |
 <!-- /VALIDATION -->
 
@@ -186,13 +186,13 @@ For the largest regions (from the benchmark results):
 <!-- TIMING -->
 | Region | Road nodes in OSM | Load | Graph | CH | Total | Peak RAM |
 |---|---:|---:|---:|---:|---:|---:|
-| New York State | 6.6 M | 21 s | 5 s | 7 s | 34 s | 2.4 GB |
-| Colombia | 9.7 M | 29 s | 10 s | 12 s | 52 s | 2.8 GB |
-| California | 14.1 M | 49 s | 13 s | 17 s | 80 s | 4.7 GB |
-| Texas | 15.8 M | 52 s | 15 s | 26 s | 96 s | 5.7 GB |
-| Canada | 18.1 M | 67 s | 18 s | 18 s | 103 s | 6.2 GB |
-| Spain | 19.8 M | 76 s | 19 s | 29 s | 126 s | 5.0 GB |
-| Brazil | 78.3 M | 231 s | 92 s | 128 s | 457 s | 8.0 GB |
+| New York State | 6.6 M | 21 s | 5 s | 8 s | 36 s | 2.5 GB |
+| Colombia | 9.7 M | 27 s | 9 s | 21 s | 59 s | 3.1 GB |
+| California | 14.1 M | 50 s | 13 s | 19 s | 85 s | 4.8 GB |
+| Texas | 15.8 M | 52 s | 15 s | 26 s | 97 s | 6.0 GB |
+| Canada | 18.1 M | 72 s | 18 s | 19 s | 112 s | 6.8 GB |
+| Spain | 19.8 M | 70 s | 18 s | 40 s | 133 s | 5.4 GB |
+| Brazil | 78.3 M | 218 s | 90 s | 118 s | 443 s | 7.4 GB |
 <!-- /TIMING -->
 
 "Load" is the two passes over the extract; Brazil has 78 million road nodes, which Python still touches one

@@ -128,14 +128,30 @@ def render_tables(results):
             f"{q['route_kb_read']['median']:,.0f} | {astar} |")
     route_table = "\n".join(lines)
 
-    lines = ["| Region | Nodes | Edges | Grid | Geometry | Names | CH forward | CH backward |",
-             "|---|---:|---:|---:|---:|---:|---:|---:|"]
+    lines = ["| Region | Nodes | Edges | Grid | Geometry | Names | CH forward | CH backward | Copies |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for r in results:
         s, total = r["map"]["sections"], r["map"]["size"]
-        cells = " | ".join(f"{s[k] / total:.0%}" for k in ("nodes", "edges", "grid", "geometry", "names",
-                                                           "ch_forward", "ch_backward"))
+        cells = " | ".join(f"{s.get(k, 0) / total:.0%}" for k in ("nodes", "edges", "grid", "geometry", "names",
+                                                                  "ch_forward", "ch_backward", "copies"))
         lines.append(f"| {r['label']} | {cells} |")
     section_table = "\n".join(lines)
+
+    lines = ["| Region | Restrictions for the vehicle | Applied | Outside the network | Ambiguous | Unsupported "
+             "| Junction copies | Extra edges | Extra bytes |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for r in results:
+        b = r["build"]
+        if "restrictions" not in b:
+            continue
+        # A copy is a node record (12 B) plus its table entry (8 B); each extra edge is a 28 B record. The
+        # hierarchy grows too, but that is not separable from the rest of the CH.
+        extra = b["node_copies"] * 20 + b["edge_copies"] * 28
+        lines.append(f"| {r['label']} | {b['restrictions']:,} | {b['restrictions_applied']:,} | "
+                     f"{b['restrictions_not_found']:,} | {b['restrictions_ambiguous']:,} | "
+                     f"{b['restrictions_unsupported']:,} | {b['node_copies']:,} ({b['node_copies'] / b['nodes']:.2%}) | "
+                     f"{b['edge_copies']:,} | {_mb(extra)} MB ({extra / r['map']['size']:.1%}) |")
+    restriction_table = "\n".join(lines)
 
     admin_tables = {}
     for path in sorted(RESULTS.glob("admin-*.json")):
@@ -170,7 +186,8 @@ def render_tables(results):
 
     machines = sorted({r["machine"] for r in results})
     dates = sorted({r["extract"]["date"] for r in results if r["extract"]["date"]})
-    tables = {"SIZE": size_table, "ROUTES": route_table, "SECTIONS": section_table, "VALIDATION": validation_table,
+    tables = {"SIZE": size_table, "ROUTES": route_table, "SECTIONS": section_table,
+              "RESTRICTIONS": restriction_table, "VALIDATION": validation_table,
               "TIMING": timing_table, **admin_tables,
               "META": f"Measured on {', '.join(machines)}; OSM data from {dates[0]} to {dates[-1]}." if dates else ""}
     for doc in (README, SCALING):
