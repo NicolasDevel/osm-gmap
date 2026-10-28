@@ -177,6 +177,18 @@ def test_grid_lists_the_cells_a_segment_crosses_and_no_more(which, moto_town, gr
             assert gap < 1 / 3, (e, cid, gap)
 
 
+def test_grid_built_in_batches_is_identical(town, tmp_path, monkeypatch):
+    """The grid is computed in batches of segments to bound memory: tiny batches give the same file byte by byte."""
+    from roadpack.graph import build as graph_build
+    from roadpack.pipeline import build
+    out = {}
+    for batch in (graph_build.GRID_BATCH, 3):
+        monkeypatch.setattr(graph_build, "GRID_BATCH", batch)
+        out[batch] = tmp_path / f"town-{batch}.gmap"
+        build(town.osm, TOWN_BBOX, PROFILES["motorcycle"], out[batch], log=lambda _: None)
+    assert out[3].read_bytes() == out[graph_build.GRID_BATCH].read_bytes()
+
+
 def test_cells_outside_the_grid_are_empty(moto_town):
     g = moto_town
     assert g.edges_in_cell(-1, 0) == [] and g.edges_in_cell(0, g.cols) == []

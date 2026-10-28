@@ -153,31 +153,41 @@ def _sequential_sums(values, offsets):
 
 
 GRID_STEP = 0.25  # sampling step along the geometry, in cells
+GRID_BATCH = 200_000  # segments per batch: the samples of a whole country at once took gigabytes
 
 
-def _cells_crossed(lat, lon, pt_off, min_lat, min_lon, cell_deg, rows, cols):
-    """(segment, cell id) of every grid cell the polylines cross. Points of segment s are lat/lon[pt_off[s]:
-    pt_off[s + 1]]. Each piece is sampled every GRID_STEP cells, both ends included; when two consecutive samples
-    differ in both row and column, the two corner cells are added too, so no crossed cell is missed (a superset of
-    the exact traversal, only ever by a cell the line passes within a quarter cell of). Pairs may repeat."""
-    x = (lon - min_lon) / cell_deg
-    y = (lat - min_lat) / cell_deg
-    seg_of_point = np.repeat(np.arange(len(pt_off) - 1), np.diff(pt_off))
-    starts = np.ones(len(lat), bool)
-    starts[pt_off[1:] - 1] = False  # the last point of a segment starts no piece
-    i = np.flatnonzero(starts[:-1])
-    dx, dy = x[i + 1] - x[i], y[i + 1] - y[i]
-    steps = np.maximum(1, np.ceil(np.hypot(dx, dy) / GRID_STEP)).astype(np.int64)
-    piece = np.repeat(np.arange(len(i)), steps + 1)
-    t = ranges(np.zeros(len(i), np.int64), steps + 1) / steps[piece]
-    r = np.clip(np.floor(y[i][piece] + dy[piece] * t).astype(np.int64), 0, rows - 1)
-    c = np.clip(np.floor(x[i][piece] + dx[piece] * t).astype(np.int64), 0, cols - 1)
-    seg = seg_of_point[i][piece]
-    # Diagonal moves between consecutive samples of a piece: add both corner cells.
-    diag = np.flatnonzero((piece[1:] == piece[:-1]) & (r[1:] != r[:-1]) & (c[1:] != c[:-1]))
-    seg = np.concatenate([seg, seg[diag], seg[diag]])
-    cid = np.concatenate([r * cols + c, r[diag] * cols + c[diag + 1], r[diag + 1] * cols + c[diag]])
-    return seg, cid
+def _grid_keys(lat, lon, pt_off, min_lat, min_lon, cell_deg, rows, cols):
+    """Sorted distinct `cell id * segment count + segment` of every grid cell the polylines cross. Points of segment
+    s are lat/lon[pt_off[s]:pt_off[s + 1]]. Each piece is sampled every GRID_STEP cells, both ends included; when two
+    consecutive samples differ in both row and column, the two corner cells are added too, so no crossed cell is
+    missed (a superset of the exact traversal, only ever by a cell the line passes within a quarter cell of).
+    Done in batches of segments, keeping only each batch's distinct keys, so memory does not grow with the country."""
+    n_seg = len(pt_off) - 1
+    batches = []
+    for s0 in range(0, n_seg, GRID_BATCH):
+        s1 = min(n_seg, s0 + GRID_BATCH)
+        p0, p1 = pt_off[s0], pt_off[s1]
+        x = (lon[p0:p1] - min_lon) / cell_deg
+        y = (lat[p0:p1] - min_lat) / cell_deg
+        local_off = pt_off[s0:s1 + 1] - p0
+        seg_of_point = np.repeat(np.arange(s0, s1), np.diff(local_off))
+        starts = np.ones(p1 - p0, bool)
+        starts[local_off[1:] - 1] = False  # the last point of a segment starts no piece
+        i = np.flatnonzero(starts)
+        dx, dy = x[i + 1] - x[i], y[i + 1] - y[i]
+        steps = np.maximum(1, np.ceil(np.hypot(dx, dy) / GRID_STEP)).astype(np.int64)
+        piece = np.repeat(np.arange(len(i)), steps + 1)
+        t = ranges(np.zeros(len(i), np.int64), steps + 1) / steps[piece]
+        r = np.clip(np.floor(y[i][piece] + dy[piece] * t).astype(np.int64), 0, rows - 1)
+        c = np.clip(np.floor(x[i][piece] + dx[piece] * t).astype(np.int64), 0, cols - 1)
+        seg = seg_of_point[i][piece]
+        del t, x, y
+        # Diagonal moves between consecutive samples of a piece: add both corner cells.
+        diag = np.flatnonzero((piece[1:] == piece[:-1]) & (r[1:] != r[:-1]) & (c[1:] != c[:-1]))
+        keys = np.concatenate([(r * cols + c) * n_seg + seg, (r[diag] * cols + c[diag + 1]) * n_seg + seg[diag],
+                               (r[diag + 1] * cols + c[diag]) * n_seg + seg[diag]])
+        batches.append(unique(keys))
+    return unique(np.concatenate(batches)) if batches else np.zeros(0, np.int64)
 
 
 def build_graph(network: RoadNetwork, cell_deg=CELL_DEG, simplify_tolerance_m=SIMPLIFY_TOLERANCE_M) -> RoadGraph:
@@ -259,8 +269,7 @@ def build_graph(network: RoadNetwork, cell_deg=CELL_DEG, simplify_tolerance_m=SI
     seg_edge = np.full(len(starts), -1, np.int64)
     segs, first = first_occurrences(segment)
     seg_edge[segs] = first
-    seg_cell, cid = _cells_crossed(plat, plon, pt_off, min_lat, min_lon, cell_deg, rows, cols)
-    key = unique(cid * len(starts) + seg_cell)  # sorted by cell, then by segment; each pair once
+    key = _grid_keys(plat, plon, pt_off, min_lat, min_lon, cell_deg, rows, cols)  # by cell, then segment
     cid, items = key // len(starts), seg_edge[key % len(starts)]
     cell_ids, cell_first = first_occurrences(cid)
     grid = Grid(float(min_lat), float(min_lon), cell_deg, cols, rows, cell_ids,
