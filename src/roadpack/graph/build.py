@@ -152,6 +152,34 @@ def _sequential_sums(values, offsets):
     return out
 
 
+GRID_STEP = 0.25  # sampling step along the geometry, in cells
+
+
+def _cells_crossed(lat, lon, pt_off, min_lat, min_lon, cell_deg, rows, cols):
+    """(segment, cell id) of every grid cell the polylines cross. Points of segment s are lat/lon[pt_off[s]:
+    pt_off[s + 1]]. Each piece is sampled every GRID_STEP cells, both ends included; when two consecutive samples
+    differ in both row and column, the two corner cells are added too, so no crossed cell is missed (a superset of
+    the exact traversal, only ever by a cell the line passes within a quarter cell of). Pairs may repeat."""
+    x = (lon - min_lon) / cell_deg
+    y = (lat - min_lat) / cell_deg
+    seg_of_point = np.repeat(np.arange(len(pt_off) - 1), np.diff(pt_off))
+    starts = np.ones(len(lat), bool)
+    starts[pt_off[1:] - 1] = False  # the last point of a segment starts no piece
+    i = np.flatnonzero(starts[:-1])
+    dx, dy = x[i + 1] - x[i], y[i + 1] - y[i]
+    steps = np.maximum(1, np.ceil(np.hypot(dx, dy) / GRID_STEP)).astype(np.int64)
+    piece = np.repeat(np.arange(len(i)), steps + 1)
+    t = ranges(np.zeros(len(i), np.int64), steps + 1) / steps[piece]
+    r = np.clip(np.floor(y[i][piece] + dy[piece] * t).astype(np.int64), 0, rows - 1)
+    c = np.clip(np.floor(x[i][piece] + dx[piece] * t).astype(np.int64), 0, cols - 1)
+    seg = seg_of_point[i][piece]
+    # Diagonal moves between consecutive samples of a piece: add both corner cells.
+    diag = np.flatnonzero((piece[1:] == piece[:-1]) & (r[1:] != r[:-1]) & (c[1:] != c[:-1]))
+    seg = np.concatenate([seg, seg[diag], seg[diag]])
+    cid = np.concatenate([r * cols + c, r[diag] * cols + c[diag + 1], r[diag + 1] * cols + c[diag]])
+    return seg, cid
+
+
 def build_graph(network: RoadNetwork, cell_deg=CELL_DEG, simplify_tolerance_m=SIMPLIFY_TOLERANCE_M) -> RoadGraph:
     t0 = time.time()
     refs = network.refs
@@ -184,7 +212,6 @@ def build_graph(network: RoadNetwork, cell_deg=CELL_DEG, simplify_tolerance_m=SI
     seg_a, seg_b = node_index[refs[starts]], node_index[refs[ends]]
 
     # Lengths along the original geometry, summed point by point like the reference (rounding stays identical).
-    first_pt = pt_off[:-1]
     pair = np.ones(len(plat), bool)
     pair[pt_off[1:] - 1] = False  # the last point of a segment starts no pair
     d = _haversine(plat[:-1], plon[:-1], plat[1:], plon[1:])
@@ -192,12 +219,6 @@ def build_graph(network: RoadNetwork, cell_deg=CELL_DEG, simplify_tolerance_m=SI
     pair_off = np.zeros(len(starts) + 1, np.int64)
     np.cumsum(npts - 1, out=pair_off[1:])
     seg_length = _sequential_sums(d, pair_off)
-
-    # Per-segment bounding box of the original geometry (for the spatial grid).
-    bb_min_lat = np.minimum.reduceat(plat, first_pt)
-    bb_min_lon = np.minimum.reduceat(plon, first_pt)
-    bb_max_lat = np.maximum.reduceat(plat, first_pt)
-    bb_max_lon = np.maximum.reduceat(plon, first_pt)
 
     # Douglas-Peucker on segments with interior points.
     keep = np.zeros(len(plat), bool)
@@ -232,21 +253,15 @@ def build_graph(network: RoadNetwork, cell_deg=CELL_DEG, simplify_tolerance_m=SI
     weight = np.maximum(1, np.round(length_m.astype(np.float64) * 36 / speed)).astype(np.uint32)
     first_edge = np.searchsorted(source, np.arange(len(gnodes) + 1)).astype(np.int64)
 
-    # Sparse spatial grid: each segment is listed (through its first edge) in every cell of its bounding box.
+    # Sparse spatial grid: each segment is listed (through its first edge) in every cell its original geometry
+    # crosses. (Listing it in every cell of its bounding box, as before, put a long diagonal road in hundreds of cells
+    # it never touches: 36 % of Canada's map was the grid.)
     seg_edge = np.full(len(starts), -1, np.int64)
     segs, first = first_occurrences(segment)
     seg_edge[segs] = first
-    r0 = ((bb_min_lat - min_lat) / cell_deg).astype(np.int64)
-    c0 = ((bb_min_lon - min_lon) / cell_deg).astype(np.int64)
-    r1 = ((bb_max_lat - min_lat) / cell_deg).astype(np.int64)
-    c1 = ((bb_max_lon - min_lon) / cell_deg).astype(np.int64)
-    ncols = c1 - c0 + 1
-    ncells = (r1 - r0 + 1) * ncols
-    seg_rep = np.repeat(np.arange(len(starts)), ncells)
-    k = np.arange(int(ncells.sum())) - np.repeat(np.cumsum(ncells) - ncells, ncells)
-    cid = (r0[seg_rep] + k // ncols[seg_rep]) * cols + c0[seg_rep] + k % ncols[seg_rep]
-    by_cell = np.argsort(cid, kind="stable")
-    cid, items = cid[by_cell], seg_edge[seg_rep[by_cell]]
+    seg_cell, cid = _cells_crossed(plat, plon, pt_off, min_lat, min_lon, cell_deg, rows, cols)
+    key = unique(cid * len(starts) + seg_cell)  # sorted by cell, then by segment; each pair once
+    cid, items = key // len(starts), seg_edge[key % len(starts)]
     cell_ids, cell_first = first_occurrences(cid)
     grid = Grid(float(min_lat), float(min_lon), cell_deg, cols, rows, cell_ids,
                 np.append(cell_first, len(cid)), items)

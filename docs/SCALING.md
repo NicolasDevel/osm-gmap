@@ -40,9 +40,8 @@ Ways, nodes, segments and edges are numpy arrays (structure of arrays) instead o
 | Splitting ways at intersections | node use counts with `bincount`, cut positions with `flatnonzero` |
 | Morton (Z-order) node order | bit interleaving on integer arrays, then `lexsort` |
 | Segment lengths | haversine on all point pairs, summed per segment (see below) |
-| Bounding boxes | `minimum.reduceat` / `maximum.reduceat` |
 | Edges in CSR order | `lexsort` by (source node, segment) |
-| Spatial grid | each segment repeated once per cell of its bounding box, then a stable sort by cell |
+| Spatial grid | every piece of geometry sampled each quarter cell (plus the corner cells of diagonal steps), then the distinct (cell, segment) pairs sorted |
 | Writing the file | numpy structured arrays with the exact record layout of [FORMAT.md](../FORMAT.md) |
 
 Only Douglas-Peucker still runs in Python, one segment at a time and in batches of 50,000 segments, so it
@@ -94,6 +93,11 @@ files:
 | Colombia | 9.7 M | 79 s, 4.7 GB | 48 s, 2.8 GB | byte-identical |
 | California | 14.1 M | 156 s, 7.6 GB | 79 s, 4.8 GB | byte-identical |
 | Spain | 19.8 M | 211 s, 8.1 GB | 110 s, 6.4 GB | same graph, 1 pair of nodes numbered the other way |
+
+This comparison was made on 2026-10-22, with `.gmap` v2. Two later changes alter the output on purpose: turn
+restrictions (v3: junction copies, an 80-byte header and a copies table) and a spatial grid that lists each segment
+only in the cells it crosses. The nodes, edges, geometry, names and hierarchy of a build without restrictions
+(`--no-restrictions`) are not touched by either; the header, the grid and therefore the offsets differ.
 
 SHA-256 of the byte-identical files: Bogotá `2f2403513a1aa83cb309e031c4ef0349fc025e51de8029d8727e49116b0eb814`,
 Colombia `737a1f061de8e09382780a0fd600d444353caf452f6b743ca1939b25c3a77bfb`, California
@@ -200,13 +204,14 @@ by one in the node pass. "Graph" is the numpy work plus Douglas-Peucker; "CH" is
 
 ## Limits
 
-- **Format:** `.gmap` v2 uses 32-bit offsets and a 16-bit grid, so a map must stay under 4 GiB and about 164°
+- **Format:** `.gmap` uses 32-bit offsets and a 16-bit grid, so a map must stay under 4 GiB and about 164°
   of longitude. Brazil is 2.5 GB. The whole United States would be about 8 GB and crosses the 180th
   meridian (Alaska), so it is built per state. The writer refuses maps beyond these limits instead of
   producing a corrupt file.
 - **Memory:** the fixed ~1.5 GB of the id filter, plus what grows with the road network: 2.8 GB in total for
   Colombia, 5.0 GB for Spain, 6.2 GB for Canada, 8.0 GB for Brazil (78 million road nodes). The whole United
   States would not fit in 16 GB.
-- **Spatial grid:** each segment is listed in every cell of its bounding box, which inflates the grid where
-  roads are long (36 % of the Canada map). Listing only the cells a segment actually crosses would shrink it
-  without changing the format.
+- **Spatial grid:** it used to list each segment in every cell of its bounding box, which inflated it where
+  roads are long (36 % of the Canada map). It now lists only the cells a segment crosses, without changing the
+  format: the grid of Canada went from 275 to 86 MB (the map from 768 to 579 MB), Colombia's from 44 to 20 MB,
+  with the same routes and nearest roads.

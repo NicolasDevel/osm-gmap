@@ -132,6 +132,51 @@ def test_every_edge_point_is_indexed(moto_town):
             assert same_segment & set(g.edges_in_cell(row, col)), (e, lat, lon)
 
 
+def _grid_xy(g, lat, lon):
+    return (lon - g.min_lon) / g.cell, (lat - g.min_lat) / g.cell
+
+
+@pytest.fixture(scope="module")
+def diagonal_map(tmp_path_factory):
+    """Long diagonal and curved roads: their bounding boxes cover many cells they never touch."""
+    from osm_builder import LAT0, LON0, OsmBuilder
+    from roadpack.pipeline import build
+    o = OsmBuilder()
+    o.way([o.node(LAT0, LON0), o.node(LAT0 + 0.012, LON0 + 0.009)], highway="primary", name="Diagonal")
+    arc = [o.node(LAT0 + 0.006 * math.sin(a / 10), LON0 - 0.006 * math.cos(a / 10)) for a in range(32)]
+    o.way(arc, highway="secondary", name="Curve")
+    tmp = tmp_path_factory.mktemp("diagonal")
+    out = tmp / "diagonal.gmap"
+    build(o.write(tmp / "diagonal.osm"), (LAT0 - 0.02, LON0 - 0.02, LAT0 + 0.02, LON0 + 0.02), PROFILES["motorcycle"],
+          out, log=lambda _: None)
+    return Gmap(out)
+
+
+@pytest.mark.parametrize("which", ["town", "grid", "diagonal"])
+def test_grid_lists_the_cells_a_segment_crosses_and_no_more(which, moto_town, grid_map, diagonal_map):
+    """Every cell the geometry passes through lists the segment (away from cell borders: the stored geometry is
+    simplified by up to 2 m), and every listed cell is within a third of a cell of it (not its whole bounding box)."""
+    g = {"town": moto_town, "grid": grid_map, "diagonal": diagonal_map}[which]
+    margin = 3 / (g.cell * 111_000)  # 3 m in cells
+    listed = {}
+    for cid in g.cell_ids.tolist():
+        for e in g.edges_in_cell(cid // g.cols, cid % g.cols):
+            listed.setdefault(e, set()).add(cid)
+    for e, cells in listed.items():
+        pts = [_grid_xy(g, lat, lon) for lat, lon in g.polyline(e)]
+        samples = []
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+            n = max(1, int(math.hypot(x1 - x0, y1 - y0) / 0.01))
+            samples += [(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n) for k in range(n + 1)]
+        for x, y in samples:
+            near_border = min(x % 1, 1 - x % 1, y % 1, 1 - y % 1) < margin
+            assert near_border or int(y) * g.cols + int(x) in cells, (e, x, y)
+        for cid in cells:
+            r, c = divmod(cid, g.cols)
+            gap = min(math.hypot(max(c - x, 0, x - c - 1), max(r - y, 0, y - r - 1)) for x, y in samples)
+            assert gap < 1 / 3, (e, cid, gap)
+
+
 def test_cells_outside_the_grid_are_empty(moto_town):
     g = moto_town
     assert g.edges_in_cell(-1, 0) == [] and g.edges_in_cell(0, g.cols) == []
