@@ -107,7 +107,8 @@ A* on the full graph is shown for comparison (mean over 5 routes).
 OSM turn restrictions (`type=restriction`) are applied by splitting the junctions they go through (see
 [FORMAT.md](../FORMAT.md#turn-restrictions)). Counted over the whole extract: "outside the network" are those whose
 via node is not a junction of drivable roads in the region (or whose ways the vehicle cannot use); "unsupported"
-have a way as via or several from/to members. Time-dependent ones (`restriction:conditional`) are not counted.
+have several from/to members (these tables were built before via ways were supported: then a way as via counted
+here too). Time-dependent ones (`restriction:conditional`) are not counted.
 
 <!-- RESTRICTIONS -->
 | Region | Restrictions for the vehicle | Applied | Outside the network | Ambiguous | Unsupported | Junction copies | Extra edges | Extra bytes |

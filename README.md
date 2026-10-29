@@ -146,8 +146,8 @@ What made the difference:
 - The `.gmap` format addresses 4 GiB and about 164° of longitude: Brazil fits (2.2 GB); the whole United
   States does not, so it is built per state.
 - Building needs at least about 1.5 GB of RAM, and about 9 GB for Brazil.
-- Turn restrictions with a via node are applied (in Colombia, 5,913 of 7,125); those with a via way and the
-  time-dependent ones are not. Speeds come from `maxspeed` or a default per road class (no traffic).
+- Turn restrictions with a via node or via ways are applied (in Colombia, 6,826 of 6,940 in the October 2026
+  extract); time-dependent ones are not. Speeds come from `maxspeed` or a default per road class (no traffic).
 - The microcontroller side is specified in FORMAT.md and implemented in Python here; a portable C reader is
   planned.
 

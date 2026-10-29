@@ -7,7 +7,7 @@ Passes over the file, so memory grows with the road network and not with the who
 Everything is kept in flat numpy arrays: a few dozen bytes per road node instead of Python objects.
 """
 import array
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -21,14 +21,16 @@ COORD_SCALE = 10_000_000  # osmium stores coordinates as degrees × 1e7 integers
 
 @dataclass
 class Restrictions:
-    """Turn restrictions through a node, by OSM ids: arriving along from_way at via, the vehicle may not continue
-    onto to_way (`only` False) or may only continue onto to_way (`only` True)."""
+    """Turn restrictions by OSM ids: arriving along from_way at via, the vehicle may not continue onto to_way
+    (`only` False) or may only continue onto to_way (`only` True). The via is a node, or one or more ways in
+    `via_ways` (usually the short segment across a median, for a U-turn onto the other carriageway)."""
     from_way: np.ndarray  # int64 OSM way ids
     via: np.ndarray       # int64 OSM node ids
     to_way: np.ndarray
     only: np.ndarray      # bool
-    skipped: int = 0      # restrictions for the vehicle that this format cannot express (a way as via, several
-                          # from/to members)
+    skipped: int = 0      # restrictions for the vehicle that this format cannot express (several from or to
+                          # members, a node and ways mixed as via)
+    via_ways: list = field(default_factory=list)  # (from way, (via ways...), to way, only)
 
     @staticmethod
     def empty():
@@ -36,7 +38,7 @@ class Restrictions:
         return Restrictions(z, z, z, np.zeros(0, bool))
 
     def __len__(self):
-        return len(self.via)
+        return len(self.via) + len(self.via_ways)
 
 
 @dataclass
@@ -133,8 +135,8 @@ def _read_nodes(path, ids):
 
 
 def _read_restrictions(path, profile: Profile) -> Restrictions:
-    """Pass 3: turn restrictions for the vehicle with a single from way, via node and to way."""
-    rows, skipped = [], 0
+    """Pass 3: turn restrictions for the vehicle with a single from way and to way, and a via node or via ways."""
+    rows, via_ways, skipped = [], [], 0
     relations = osmium.FileProcessor(str(path), osmium.osm.RELATION).with_filter(
         osmium.filter.TagFilter(("type", "restriction")))
     for r in relations:
@@ -146,17 +148,21 @@ def _read_restrictions(path, profile: Profile) -> Restrictions:
             if m.role in members:
                 members[m.role].append((m.type, m.ref))
         f, v, t = members["from"], members["via"], members["to"]
-        if not (len(f) == len(v) == len(t) == 1 and f[0][0] == "w" and v[0][0] == "n" and t[0][0] == "w"):
+        if not (len(f) == len(t) == 1 and f[0][0] == "w" and t[0][0] == "w" and v):
             skipped += 1
-            continue
-        rows.append((f[0][1], v[0][1], t[0][1], value.startswith("only_")))
-    if not rows:
-        empty = Restrictions.empty()
-        empty.skipped = skipped
-        return empty
-    cols = list(zip(*rows))
-    return Restrictions(np.array(cols[0], np.int64), np.array(cols[1], np.int64), np.array(cols[2], np.int64),
-                        np.array(cols[3], bool), skipped)
+        elif len(v) == 1 and v[0][0] == "n":
+            rows.append((f[0][1], v[0][1], t[0][1], value.startswith("only_")))
+        elif all(m[0] == "w" for m in v):
+            via_ways.append((f[0][1], tuple(m[1] for m in v), t[0][1], value.startswith("only_")))
+        else:
+            skipped += 1
+    result = Restrictions.empty()
+    if rows:
+        cols = list(zip(*rows))
+        result = Restrictions(np.array(cols[0], np.int64), np.array(cols[1], np.int64), np.array(cols[2], np.int64),
+                              np.array(cols[3], bool))
+    result.skipped, result.via_ways = skipped, via_ways
+    return result
 
 
 def load_roads(path: Path, bbox, profile: Profile, restrictions=True) -> RoadNetwork:

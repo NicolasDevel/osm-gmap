@@ -113,6 +113,62 @@ def test_u_turn_onto_the_other_carriageway(tmp_path):
     assert [g.original(g.target[e]) for e in g.out_edges(copy)] == [c_n]
 
 
+def test_no_u_turn_across_the_median(tmp_path):
+    """A dual carriageway with a crossing in the median at B: arriving eastbound, no U-turn through it back west.
+    Arriving at B1 from the side street, the same crossing and turn are allowed.
+
+        N
+        │
+       A1 ──> B1 ──> C1
+              │      │
+       A0 <── B0 <── C0
+    """
+    o = OsmBuilder()
+    p = {"A1": (1, 0), "B1": (1, 1), "C1": (1, 2), "A0": (0, 0), "B0": (0, 1), "C0": (0, 2), "N": (12, 1)}
+    ids = {k: o.node(LAT0 + r * STEP / 4, LON0 + c * STEP) for k, (r, c) in p.items()}
+    east = o.way([ids["A1"], ids["B1"]], highway="primary", oneway="yes", name="Avenue")
+    o.way([ids["B1"], ids["C1"]], highway="primary", oneway="yes", name="Avenue")
+    o.way([ids["C0"], ids["B0"]], highway="primary", oneway="yes", name="Avenue")
+    west = o.way([ids["B0"], ids["A0"]], highway="primary", oneway="yes", name="Avenue")
+    median = o.way([ids["B1"], ids["B0"]], highway="primary", name="Avenue")
+    o.way([ids["C1"], ids["C0"]], highway="primary", name="Avenue")
+    o.way([ids["N"], ids["B1"]], highway="residential", name="Side street")
+    o.restriction("no_u_turn", east, [median], west)
+    g, stats = _build(o, tmp_path, "median")
+    assert stats["restrictions_applied"] == 1 and stats["node_copies"] == 2  # copies of B1 and B0
+    pts = {k: o.nodes[i] for k, i in ids.items()}
+    a1, a0, n = (_node_at(g, *pts[k]) for k in ("A1", "A0", "N"))
+    path, _ = route_ch(g, a1, a0)
+    assert [g.point(g.target[e]) for e in path] == [pts[k] for k in ("B1", "C1", "C0", "B0", "A0")]
+    path, _ = route_ch(g, n, a0)
+    assert [g.point(g.target[e]) for e in path] == [pts[k] for k in ("B1", "B0", "A0")]
+    # Crossing the median after arriving eastbound is still allowed: it just leads nowhere.
+    assert route_ch(g, a1, _node_at(g, *pts["B0"]))[0]
+
+
+def test_via_ways_combine_with_via_nodes(tmp_path):
+    """A via-node restriction at the end of the median crossing (from the crossing, no right turn) applies to every
+    arrival, also through the copies of the via-way restriction; together they leave no way west from B0."""
+    o = OsmBuilder()
+    p = {"A1": (1, 0), "B1": (1, 1), "C1": (1, 2), "A0": (0, 0), "B0": (0, 1), "C0": (0, 2), "N": (12, 1)}
+    ids = {k: o.node(LAT0 + r * STEP / 4, LON0 + c * STEP) for k, (r, c) in p.items()}
+    east = o.way([ids["A1"], ids["B1"]], highway="primary", oneway="yes")
+    o.way([ids["B1"], ids["C1"]], highway="primary", oneway="yes")
+    o.way([ids["C0"], ids["B0"]], highway="primary", oneway="yes")
+    west = o.way([ids["B0"], ids["A0"]], highway="primary", oneway="yes")
+    median = o.way([ids["B1"], ids["B0"]], highway="primary")
+    o.way([ids["C1"], ids["C0"]], highway="primary")
+    o.way([ids["N"], ids["B1"]], highway="residential")
+    o.restriction("no_u_turn", east, [median], west)
+    o.restriction("no_right_turn", median, ids["B0"], west)
+    g, stats = _build(o, tmp_path, "both")
+    assert stats["restrictions_applied"] == 2
+    pts = {k: o.nodes[i] for k, i in ids.items()}
+    a1, a0, n = (_node_at(g, *pts[k]) for k in ("A1", "A0", "N"))
+    assert [g.point(g.target[e]) for e in route_ch(g, a1, a0)[0]][1:] == [pts[k] for k in ("C1", "C0", "B0", "A0")]
+    assert [g.point(g.target[e]) for e in route_ch(g, n, a0)[0]] == [pts[k] for k in ("B1", "C1", "C0", "B0", "A0")]
+
+
 def test_profile_rules(cross, tmp_path):
     o, ids, ways, pts = cross
     o.restriction("no_left_turn", ways["S"], ids["C"], ways["W"], except_="motorcycle")
@@ -133,7 +189,8 @@ def test_ambiguous_and_unsupported_are_skipped(tmp_path):
     through = o.way([w, c, e], highway="residential")  # passes through the junction: which side is "from"?
     north = o.way([c, n], highway="residential")
     o.restriction("no_left_turn", through, c, north)
-    o.restriction("no_left_turn", north, through, north, via_type="way")
+    o.restriction("no_left_turn", north, c, through)
+    o.relations[-1][1].append(("way", through, "from"))  # two from ways: not supported
     o.restriction("no_left_turn", north, 999999, through)  # via node not in the network
     _, stats = _build(o, tmp_path, "skip")
     assert stats["restrictions"] == 3
@@ -158,32 +215,41 @@ def test_maneuvers_see_the_whole_junction(cross, tmp_path):
 
 
 def _turn_dijkstra(g, start, forbidden):
-    """Ground truth on the map built without restrictions: Dijkstra over edges, skipping forbidden turns given as
-    (from point, via point, to point). Returns the best cost to reach each point."""
+    """Ground truth on the map built without restrictions: Dijkstra over pairs of consecutive edges, skipping
+    forbidden sequences of points: (from, via, to) for a via node, (from, via 1, via 2, to) for a via way. Having
+    driven (from, via 1, via 2) of a via-way restriction, turning back to via 1 is forbidden too.
+    Returns the best cost to reach each point."""
+    via_way_starts = {t[:3] for t in forbidden if len(t) == 4}
     best = {}
     dist = {}
     heap = []
     for e in g.out_edges(start):
-        dist[e] = g.weight[e]
-        heapq.heappush(heap, (g.weight[e], e))
+        dist[(None, e)] = g.weight[e]
+        heapq.heappush(heap, (g.weight[e], -1, e))
     while heap:
-        d, e = heapq.heappop(heap)
-        if d > dist[e]:
+        d, p, e = heapq.heappop(heap)
+        p = None if p < 0 else p
+        if d > dist[(p, e)]:
             continue
         v = g.target[e]
         best[g.point(v)] = min(best.get(g.point(v), math.inf), d)
-        turn_from = g.point(g.source[e])
+        behind = (g.point(g.source[e]), g.point(v))
+        if p is not None:
+            behind = (g.point(g.source[p]),) + behind
         for f in g.out_edges(v):
-            if (turn_from, g.point(v), g.point(g.target[f])) in forbidden:
+            ahead = g.point(g.target[f])
+            if behind[-2:] + (ahead,) in forbidden or behind + (ahead,) in forbidden:
+                continue
+            if behind in via_way_starts and ahead == behind[1]:
                 continue
             nd = d + g.weight[f]
-            if nd < dist.get(f, math.inf):
-                dist[f] = nd
-                heapq.heappush(heap, (nd, f))
+            if nd < dist.get((e, f), math.inf):
+                dist[(e, f)] = nd
+                heapq.heappush(heap, (nd, e, f))
     return best
 
 
-@pytest.mark.parametrize("seed", [1, 2, 3, 4])
+@pytest.mark.parametrize("seed", [1, 2, 3, 4, 5, 6, 7, 8])
 def test_random_grids_match_a_turn_aware_dijkstra(seed, tmp_path):
     osm, ids = grid_network(7, seed=seed)
     size = len(ids)
@@ -205,8 +271,21 @@ def test_random_grids_match_a_turn_aware_dijkstra(seed, tmp_path):
         if not can_go(u, v):
             continue
         fw = way_of[frozenset((u, v))]
-        kind = rng.choice(["no", "no", "no", "only", "uturn"])
-        if kind == "uturn":
+        kind = rng.choice(["no", "no", "no", "only", "uturn", "way", "way"])
+        if kind == "way":  # u -> v along the via way to w, then not (or only) onto one of w's other arms
+            w = rng.choice([a for a in arms if a != u])
+            r2, c2 = next((i, j) for i, row in enumerate(ids) for j, x in enumerate(row) if x == w)
+            if not (0 < r2 < size - 1 and 0 < c2 < size - 1) or not can_go(v, w):
+                continue
+            arms2 = [ids[r2 - 1][c2], ids[r2 + 1][c2], ids[r2][c2 - 1], ids[r2][c2 + 1]]
+            x = rng.choice([a for a in arms2 if a != v])
+            if not can_go(w, x):
+                continue
+            only = rng.random() < 0.3
+            osm.restriction("only_x_turn" if only else "no_u_turn", fw, [way_of[frozenset((v, w))]],
+                            way_of[frozenset((w, x))])
+            forbidden_osm.update((u, v, w, a) for a in arms2 if (a == x) != only)
+        elif kind == "uturn":
             if not can_go(v, u):
                 continue
             osm.restriction("no_u_turn", fw, v, fw)
@@ -220,7 +299,7 @@ def test_random_grids_match_a_turn_aware_dijkstra(seed, tmp_path):
     g, stats = _build(osm, tmp_path, "grid")
     plain, _ = _build(osm, tmp_path, "plain", restrictions=False)
     assert stats["node_copies"] > 0 and plain.copy_count == 0
-    forbidden = {(point[a], point[b], point[c]) for a, b, c in forbidden_osm}
+    forbidden = {tuple(point[a] for a in turn) for turn in forbidden_osm}
     originals = [n for n in range(g.node_count) if not g.is_copy(n)]
     by_point = {g.point(n): n for n in originals}
     for s in originals:

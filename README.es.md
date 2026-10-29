@@ -148,9 +148,9 @@ Lo que hizo la diferencia:
 - El formato `.gmap` direcciona 4 GiB y unos 164° de longitud: Brasil cabe (2,2 GB); Estados Unidos completo
   no, así que se construye por estados.
 - Construir necesita al menos unos 1,5 GB de RAM, y unos 9 GB para Brasil.
-- Se aplican las restricciones de giro con un nodo como `via` (en Colombia, 5.913 de 7.125); las que tienen una
-  vía como `via` y las que dependen del horario, no. Las velocidades salen de `maxspeed` o de un valor por defecto
-  según el tipo de vía (sin tráfico).
+- Se aplican las restricciones de giro con un nodo o con vías como `via` (en Colombia, 6.826 de 6.940 en el
+  extracto de octubre de 2026); las que dependen del horario, no. Las velocidades salen de `maxspeed` o de un valor
+  por defecto según el tipo de vía (sin tráfico).
 - El lado del microcontrolador está especificado en FORMAT.md e implementado aquí en Python; hay planeado un lector
   portable en C.
 

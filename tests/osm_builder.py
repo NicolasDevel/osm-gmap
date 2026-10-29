@@ -25,9 +25,10 @@ class OsmBuilder:
         return wid
 
     def restriction(self, kind, from_way, via, to_way, via_type="node", **tags):
-        """A turn restriction relation: from way, via node (or way), to way."""
+        """A turn restriction relation: from way, via node (or way, or a list of ways), to way."""
         rid = len(self.relations) + 1
-        members = [("way", from_way, "from"), (via_type, via, "via"), ("way", to_way, "to")]
+        vias = [("way", w, "via") for w in via] if isinstance(via, list) else [(via_type, via, "via")]
+        members = [("way", from_way, "from"), *vias, ("way", to_way, "to")]
         tags = {"type": "restriction", "restriction": kind, **{k.rstrip("_").replace("__", ":"): str(v) for k, v in tags.items()}}
         self.relations.append((rid, members, {k: v for k, v in tags.items() if v != "None"}))
         return rid

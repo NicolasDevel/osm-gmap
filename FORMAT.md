@@ -161,14 +161,21 @@ A* on the full graph, with exactly the same cost.
 
 ## Turn restrictions
 
-OSM turn restrictions (`type=restriction` relations with a via node: `no_left_turn`, `only_straight_on`,
-`no_u_turn`, …) are applied by **splitting junctions**, so the graph stays node-based and the hierarchy and its
+OSM turn restrictions (`type=restriction` relations with a via node or via ways: `no_left_turn`,
+`only_straight_on`, `no_u_turn`, …) are applied by **splitting junctions**, so the graph stays node-based and the hierarchy and its
 query do not change:
 
 - At a junction with restrictions, an edge arriving along a restricted way is redirected to a **copy** of the
   junction: same coordinates, and only the exits allowed from that way (copies of the original edges, with their
   own records in the edge table). Arrivals with the same restrictions share a copy; other arrivals keep going to
   the junction itself, which keeps every exit.
+- A restriction with **via ways** (usually the short segment across a median: no U-turn onto the other
+  carriageway) becomes a chain of copies: the arrival along the from way leads to a copy of the first junction,
+  whose exit along the via way leads to a copy of the next one, and so on; the last copy lacks the forbidden exits.
+  Inside the via ways no copy has the exit that turns back along them (otherwise a route could cross the median,
+  turn around in the gap and cross again, no longer arriving along the from way). In general the copies are the
+  states of an automaton over the edges driven, so restrictions that share junctions combine; a reader needs nothing
+  of this: a copy is just a node with its own exits.
 - Copies come **right after their original** in node order (same page of the SD card), and their edges right after
   the original's. The spatial grid lists only original edges.
 
@@ -188,7 +195,8 @@ What a reader has to do with copies:
   the rider sees. Compare junctions by their original.
 - **Snapping a position to a node:** use the original.
 
-Not supported (left out when building, and counted): restrictions with a way as via, with several from/to members,
-and time-dependent ones (`restriction:conditional`). If a from or to way goes through the via node instead of
-ending there, which side is meant is ambiguous, and the restriction is skipped. `except=*` and
+Not supported (left out when building, and counted): restrictions with several from/to members, or a node and ways
+mixed as via, and time-dependent ones (`restriction:conditional`). If a from or to way goes through the via node
+instead of ending there, which side is meant is ambiguous, and the restriction is skipped; so are via ways that do
+not make a single path of edges from the end of the from way to the to way. `except=*` and
 `restriction:<vehicle>` follow the vehicle profile.
